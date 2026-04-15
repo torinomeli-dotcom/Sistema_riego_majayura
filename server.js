@@ -158,59 +158,39 @@ function enviarComandoESP32(cmd) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// CONEXIÓN WEBSOCKET CON EL ESP32
-// Reconexión automática cada 5 seg si se cae
+// WEBSOCKET SERVER — ESP32 se conecta al servidor (path /esp32)
+// El ESP32 inicia la conexión hacia Render — no al revés
 // ══════════════════════════════════════════════════════════════════
-let reconectandoESP32 = false;
-let timerReconexion   = null;
+const wssESP32 = new WebSocketServer({ server: httpServer, path: '/esp32', perMessageDeflate: false });
 
-function conectarESP32() {
-  if (reconectandoESP32) return;
-  reconectandoESP32 = true;
-
-  const url = process.env.ESP32_WS_URL || 'ws://192.168.1.100:81';
-  console.log(`[ESP32] Intentando conectar a ${url} ...`);
-
-  let ws;
-  try {
-    ws = new WebSocket(url, { handshakeTimeout: 5000, perMessageDeflate: false });
-  } catch (e) {
-    console.error('[ESP32] Error creando WebSocket:', e.message);
-    reconectandoESP32 = false;
-    programarReconexion();
+wssESP32.on('connection', (ws, req) => {
+  // Verificar clave secreta del ESP32
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const key = url.searchParams.get('key');
+  if (key !== (process.env.ESP32_SECRET || 'riego_esp32_2024')) {
+    console.warn('[ESP32] Conexión rechazada — clave inválida');
+    ws.close(1008, 'No autorizado');
     return;
   }
 
-  ws.on('open', () => {
-    console.log('[ESP32] ✓ Conectado');
-    wsESP32         = ws;
-    esp32Conectado  = true;
-    reconectandoESP32 = false;
-    if (timerReconexion) { clearTimeout(timerReconexion); timerReconexion = null; }
+  console.log('[ESP32] ✓ Conectado desde', req.socket.remoteAddress);
+  wsESP32        = ws;
+  esp32Conectado = true;
+  broadcastClientes({ tipo: 'conexion', esp32: true });
 
-    // Notificar clientes web
-    broadcastClientes({ tipo: 'conexion', esp32: true });
-
-    // Ping periódico cada 20 seg para mantener conexión viva
-    ws._pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ cmd: 'ping' }));
-      }
-    }, 20000);
-  });
+  // Ping cada 25 seg para mantener viva la conexión en Render
+  const pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ cmd: 'ping' }));
+  }, 25000);
 
   ws.on('message', (data) => {
     try {
       const telemetria = JSON.parse(data.toString());
-
-      // Ignorar pongs
       if (telemetria.tipo === 'pong') return;
 
-      // Adjuntar timestamp del servidor
       telemetria.serverTimestamp = Date.now();
       ultimoEstado = telemetria;
 
-      // Guardar en PostgreSQL
       guardarHistorial({
         ts:       Date.now(),
         sensores: telemetria.sensores,
@@ -218,39 +198,24 @@ function conectarESP32() {
         alerta:   telemetria.alerta_encharcamiento || false
       }).catch(e => console.error('[DB] Error guardando historial:', e.message));
 
-      // Reenviar a todos los clientes web
       broadcastClientes(telemetria);
-
     } catch (e) {
       console.error('[ESP32] Error parseando mensaje:', e.message);
     }
   });
 
-  ws.on('close', (code, reason) => {
-    console.warn(`[ESP32] Desconectado (${code} ${reason})`);
+  ws.on('close', (code) => {
+    console.warn(`[ESP32] Desconectado (${code})`);
     esp32Conectado = false;
-    wsESP32 = null;
-    if (ws._pingInterval) clearInterval(ws._pingInterval);
-    reconectandoESP32 = false;
-
+    wsESP32        = null;
+    clearInterval(pingInterval);
     broadcastClientes({ tipo: 'conexion', esp32: false });
-    programarReconexion();
   });
 
-  ws.on('error', (err) => {
-    console.error('[ESP32] Error WS:', err.message);
-    // El evento 'close' se disparará automáticamente
-  });
-}
+  ws.on('error', (err) => console.error('[ESP32] Error WS:', err.message));
+});
 
-function programarReconexion() {
-  if (timerReconexion) return;
-  timerReconexion = setTimeout(() => {
-    timerReconexion = null;
-    conectarESP32();
-  }, 5000);
-  console.log('[ESP32] Reintento en 5 segundos...');
-}
+function conectarESP32() { /* no-op: ESP32 se conecta al servidor */ }
 
 // ── Arrancar servidor ───────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
