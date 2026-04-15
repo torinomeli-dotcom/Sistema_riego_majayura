@@ -39,4 +39,12 @@ async function obtenerHistorial(limit = 100) {
   return res.rows.reverse(); // más antiguo primero
 }
 
-module.exports = { pool, initDB, guardarHistorial, obtenerHistorial };
+async function obtenerHistorialDesde(desdeTs, maxRows = 5000) {
+  const res = await pool.query(
+    'SELECT ts, sensores, valvula, alerta FROM historial WHERE ts >= $1 ORDER BY ts ASC LIMIT $2',
+    [desdeTs, maxRows]
+  );
+  return res.rows;
+}
+
+module.exports = { pool, initDB, guardarHistorial, obtenerHistorial, obtenerHistorialDesde };

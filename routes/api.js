@@ -5,6 +5,7 @@
 
 const express = require('express');
 const jwt     = require('jsonwebtoken');
+const { obtenerHistorialDesde } = require('../database');
 
 // Middleware de autenticación JWT
 function requireAuth(req, res, next) {
@@ -117,6 +118,106 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
       });
     } catch (e) {
       res.status(500).json({ error: 'Error consultando estadísticas.' });
+    }
+  });
+
+  // ── GET /api/analytics — Big Data analytics ────────────────────
+  router.get('/analytics', requireAuth, async (req, res) => {
+    try {
+      const rango = req.query.rango || '24h';
+      let desdeMs;
+      switch (rango) {
+        case '7d':  desdeMs = Date.now() - 7  * 24 * 3600 * 1000; break;
+        case '30d': desdeMs = Date.now() - 30 * 24 * 3600 * 1000; break;
+        default:    desdeMs = Date.now() -      24 * 3600 * 1000;
+      }
+
+      const hist = await obtenerHistorialDesde(desdeMs);
+      if (hist.length === 0) return res.json({ sin_datos: true });
+
+      const esPorHora = rango === '24h';
+
+      // ── Resumen ──────────────────────────────────────────────
+      let totalMinRiego = 0, activaciones = 0, alertas = 0, prevValvOn = false;
+      let sumIzq = 0, sumCtr = 0, sumDer = 0;
+      let cntIzq = 0, cntCtr = 0, cntDer = 0;
+      let distSeco = 0, distHumedo = 0, distEnchar = 0;
+
+      hist.forEach(h => {
+        const valvOn = h.valvula?.estado || false;
+        if (valvOn) totalMinRiego += 0.5;
+        if (valvOn && !prevValvOn) activaciones++;
+        prevValvOn = valvOn;
+        if (h.alerta) alertas++;
+
+        const s = h.sensores || {};
+        const izqVals = [s.SL1?.pct, s.SL2?.pct, s.SL3?.pct].filter(v => v != null);
+        const ctrVals = [s.SM1?.pct, s.SM2?.pct].filter(v => v != null);
+        const derVals = [s.SR1?.pct, s.SR2?.pct, s.SR3?.pct].filter(v => v != null);
+        if (izqVals.length) { sumIzq += izqVals.reduce((a, b) => a + b, 0) / izqVals.length; cntIzq++; }
+        if (ctrVals.length) { sumCtr += ctrVals.reduce((a, b) => a + b, 0) / ctrVals.length; cntCtr++; }
+        if (derVals.length) { sumDer += derVals.reduce((a, b) => a + b, 0) / derVals.length; cntDer++; }
+
+        Object.values(s).forEach(sen => {
+          if (!sen?.estado) return;
+          if      (sen.estado === 'SECO')        distSeco++;
+          else if (sen.estado === 'ENCHARCADO')  distEnchar++;
+          else                                    distHumedo++;
+        });
+      });
+
+      // ── Agrupación temporal ──────────────────────────────────
+      function claveGrupo(ts) {
+        const d = new Date(Number(ts));
+        if (esPorHora) {
+          const h = String(d.getHours()).padStart(2, '0');
+          const m = d.getMinutes() < 30 ? '00' : '30';
+          return `${h}:${m}`;
+        }
+        return `${d.getDate()}/${d.getMonth() + 1}`;
+      }
+
+      const grupos = {};
+      hist.forEach(h => {
+        const k = claveGrupo(h.ts);
+        if (!grupos[k]) grupos[k] = { izqSum: 0, ctrSum: 0, derSum: 0, n: 0, riegoMin: 0 };
+        const s = h.sensores || {};
+        const izqVals = [s.SL1?.pct, s.SL2?.pct, s.SL3?.pct].filter(v => v != null);
+        const ctrVals = [s.SM1?.pct, s.SM2?.pct].filter(v => v != null);
+        const derVals = [s.SR1?.pct, s.SR2?.pct, s.SR3?.pct].filter(v => v != null);
+        if (izqVals.length) grupos[k].izqSum += izqVals.reduce((a, b) => a + b, 0) / izqVals.length;
+        if (ctrVals.length) grupos[k].ctrSum += ctrVals.reduce((a, b) => a + b, 0) / ctrVals.length;
+        if (derVals.length) grupos[k].derSum += derVals.reduce((a, b) => a + b, 0) / derVals.length;
+        grupos[k].n++;
+        if (h.valvula?.estado) grupos[k].riegoMin += 0.5;
+      });
+
+      const labels    = Object.keys(grupos);
+      const izqData   = labels.map(k => Math.round(grupos[k].izqSum / grupos[k].n) || 0);
+      const ctrData   = labels.map(k => Math.round(grupos[k].ctrSum / grupos[k].n) || 0);
+      const derData   = labels.map(k => Math.round(grupos[k].derSum / grupos[k].n) || 0);
+      const riegoData = labels.map(k => parseFloat(grupos[k].riegoMin.toFixed(1)));
+
+      res.json({
+        resumen: {
+          lecturas:     hist.length,
+          minutosRiego: totalMinRiego.toFixed(1),
+          activaciones,
+          alertas,
+          humedadProm: {
+            izq: cntIzq ? Math.round(sumIzq / cntIzq) : 0,
+            ctr: cntCtr ? Math.round(sumCtr / cntCtr) : 0,
+            der: cntDer ? Math.round(sumDer / cntDer) : 0,
+          }
+        },
+        tendencia: { labels, izq: izqData, ctr: ctrData, der: derData },
+        riego:     { labels, minutos: riegoData },
+        distribucion: { seco: distSeco, humedo: distHumedo, encharcado: distEnchar }
+      });
+
+    } catch (e) {
+      console.error('[API] Error analytics:', e.message);
+      res.status(500).json({ error: 'Error consultando analytics.' });
     }
   });
 
