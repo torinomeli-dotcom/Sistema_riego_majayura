@@ -1,29 +1,40 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  RIEGO IOT — Servidor Node.js v2.0                      ║
- * ║  Puente WebSocket ESP32 ↔ Clientes Web + REST API JWT   ║
+ * ║  RIEGO IOT — Servidor Node.js v4.0                      ║
+ * ║  ESP32 → HTTP POST  |  Navegador ← SSE (sin WebSocket)  ║
  * ║  Majayura, La Guajira, Colombia                         ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
 require('dotenv').config();
-const express    = require('express');
-const http       = require('http');
-const path       = require('path');
-const { WebSocketServer, WebSocket } = require('ws');
-const morgan     = require('morgan');
-const cors       = require('cors');
-const rateLimit  = require('express-rate-limit');
+const express   = require('express');
+const http      = require('http');
+const path      = require('path');
+const jwt       = require('jsonwebtoken');
+const morgan    = require('morgan');
+const cors      = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes  = require('./routes/api');
 const { initDB, guardarHistorial, obtenerHistorial } = require('./database');
 
 let ultimoEstado        = null;
-let esp32Conectado      = false;
-let wsESP32             = null;   // WebSocket legacy (por si acaso)
-let esp32UltimoContacto = 0;      // Timestamp último POST de telemetría
-let comandosPendientes  = [];     // Cola de comandos para el ESP32 (HTTP)
+let esp32UltimoContacto = 0;
+let comandosPendientes  = [];
+
+// ── SSE: clientes navegador ─────────────────────────────────────
+// Mapa { id → res } — cada navegador abierto es una entrada
+const sseClientes = new Map();
+let sseNextId = 0;
+
+function sseEnviar(res, datos) {
+  try { res.write(`data: ${JSON.stringify(datos)}\n\n`); } catch (_) {}
+}
+
+function broadcastSSE(datos) {
+  sseClientes.forEach(res => sseEnviar(res, datos));
+}
 
 // ── App Express ─────────────────────────────────────────────────
 const app = express();
@@ -32,48 +43,44 @@ app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
 
-// Rate limiting global — máx 120 req/min por IP
 app.use(rateLimit({
   windowMs: 60 * 1000,
-  max: 120,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas peticiones. Espera un momento.' }
 }));
 
-// Rate limiting específico para comandos — máx 10 cmd/min por IP
 const cmdLimit = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
-  message: { error: 'Límite de comandos alcanzado (10/min).' }
+  max: 20,
+  message: { error: 'Límite de comandos alcanzado (20/min).' }
 });
 
-// ── POST /api/telemetria — ESP32 envía datos por HTTP ───────────
+// ── POST /api/telemetria — ESP32 envía datos ────────────────────
 app.post('/api/telemetria', (req, res) => {
   const key = req.query.key || req.headers['x-esp32-key'];
   if (key !== (process.env.ESP32_SECRET || 'riego_esp32_2024')) {
     return res.status(401).json({ error: 'No autorizado' });
   }
-
-  const telemetria = req.body;
-  if (!telemetria || typeof telemetria !== 'object') {
-    return res.status(400).json({ error: 'Cuerpo JSON inválido' });
+  const t = req.body;
+  if (!t || typeof t !== 'object') {
+    return res.status(400).json({ error: 'JSON inválido' });
   }
 
-  telemetria.serverTimestamp = Date.now();
-  ultimoEstado        = telemetria;
+  t.serverTimestamp   = Date.now();
+  ultimoEstado        = t;
   esp32UltimoContacto = Date.now();
-  esp32Conectado      = true;
 
   guardarHistorial({
     ts:       Date.now(),
-    sensores: telemetria.sensores,
-    valvula:  telemetria.actuadores?.valvula,
-    alerta:   telemetria.alerta_encharcamiento || false
-  }).catch(e => console.error('[DB] Error guardando historial:', e.message));
+    sensores: t.sensores,
+    valvula:  t.actuadores?.valvula,
+    alerta:   t.alerta_encharcamiento || false
+  }).catch(e => console.error('[DB]', e.message));
 
-  broadcastClientes(telemetria);
-  console.log(`[HTTP] Telemetría recibida del ESP32 — valvula=${telemetria.actuadores?.valvula?.estado}`);
+  broadcastSSE(t);
+  console.log(`[ESP32] Telemetría OK — valvula=${t.actuadores?.valvula?.estado} clientes=${sseClientes.size}`);
   res.json({ ok: true });
 });
 
@@ -83,229 +90,107 @@ app.get('/api/pendiente', (req, res) => {
   if (key !== (process.env.ESP32_SECRET || 'riego_esp32_2024')) {
     return res.status(401).json({ error: 'No autorizado' });
   }
-
   esp32UltimoContacto = Date.now();
-  esp32Conectado      = true;
+  if (comandosPendientes.length === 0) return res.status(204).end();
+  const cmd = comandosPendientes.shift();
+  console.log(`[ESP32] Comando entregado: ${JSON.stringify(cmd)}`);
+  res.json(cmd);
+});
 
-  if (comandosPendientes.length === 0) {
-    return res.status(204).end();
+// ── GET /api/eventos — SSE para el navegador ────────────────────
+app.get('/api/eventos', (req, res) => {
+  // Verificar token (query param o header)
+  const token = req.query.token || (req.headers.authorization || '').replace('Bearer ', '');
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 
-  const cmd = comandosPendientes.shift();
-  console.log(`[HTTP] Comando entregado al ESP32: ${JSON.stringify(cmd)}`);
-  res.json(cmd);
+  // Cabeceras SSE
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');  // Desactiva buffer en nginx/Render
+  res.flushHeaders();
+
+  const id = sseNextId++;
+  sseClientes.set(id, res);
+  console.log(`[SSE] Cliente #${id} conectado (total: ${sseClientes.size})`);
+
+  // Enviar estado actual inmediatamente
+  if (ultimoEstado) {
+    sseEnviar(res, ultimoEstado);
+  } else {
+    sseEnviar(res, { tipo: 'info', mensaje: 'Esperando datos del ESP32...' });
+  }
+
+  // Comentario de keep-alive cada 20s (evita que Render/nginx corten la conexión)
+  const ping = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (_) {}
+  }, 20000);
+
+  // Limpiar cuando el navegador cierra la pestaña
+  req.on('close', () => {
+    clearInterval(ping);
+    sseClientes.delete(id);
+    console.log(`[SSE] Cliente #${id} desconectado (total: ${sseClientes.size})`);
+  });
 });
 
 // ── Rutas autenticadas (JWT) ────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api',      apiRoutes(getUltimoEstado, getHistorial, enviarComandoESP32, cmdLimit, getESP32Status));
+app.use('/api', apiRoutes(getUltimoEstado, getHistorial, enviarComandoESP32, cmdLimit, getESP32Status));
 
-// GET /api/salud — público
-app.get('/api/salud', (req, res) => {
+// ── GET /api/salud — público ────────────────────────────────────
+app.get('/api/salud', (_req, res) => {
   res.json({
-    ok: true,
-    servidor: 'online',
-    esp32: getESP32Status() ? 'conectado' : 'desconectado',
-    ultimoContacto: esp32UltimoContacto || null,
-    clientesWeb: wssClientes ? wssClientes.clients.size : 0,
+    ok:                 true,
+    servidor:           'online',
+    esp32:              getESP32Status() ? 'conectado' : 'desconectado',
+    ultimoContacto:     esp32UltimoContacto || null,
+    clientesSSE:        sseClientes.size,
     comandosPendientes: comandosPendientes.length,
-    uptime: Math.floor(process.uptime()),
-    version: '3.0.0'
+    uptime:             Math.floor(process.uptime()),
+    version:            '4.0.0'
   });
 });
 
 // ── Archivos estáticos ──────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// SPA fallback — cualquier ruta no API devuelve index.html
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
+  if (!req.path.startsWith('/api'))
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  }
 });
 
-// ── Servidor HTTP ───────────────────────────────────────────────
-const httpServer = http.createServer(app);
-
-// ── WebSocket Server — Clientes Web (Dashboard) ─────────────────
-const wssClientes = new WebSocketServer({ server: httpServer, path: '/ws', perMessageDeflate: false });
-
-// Ping a todos los navegadores cada 25s para mantener la conexión viva en Render
-setInterval(() => {
-  wssClientes.clients.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) ws.ping();
-  });
-}, 25000);
-
-wssClientes.on('connection', (ws, req) => {
-  // Verificar token JWT en query param
-  const url    = new URL(req.url, `http://${req.headers.host}`);
-  const token  = url.searchParams.get('token');
-  const jwt    = require('jsonwebtoken');
-
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (e) {
-    console.log('[WS-WEB] Cliente rechazado — token inválido');
-    ws.close(1008, 'Token inválido');
-    return;
-  }
-
-  const ip = req.socket.remoteAddress;
-  ws.isAlive = true;
-  ws.on('pong', () => { ws.isAlive = true; });
-
-  console.log(`[WS-WEB] Cliente conectado desde ${ip}`);
-
-  // Enviar estado actual inmediatamente
-  try {
-    if (ultimoEstado) {
-      ws.send(JSON.stringify(ultimoEstado));
-    } else {
-      ws.send(JSON.stringify({
-        tipo: 'info',
-        mensaje: 'Esperando datos del ESP32...',
-        esp32Conectado: false
-      }));
-    }
-  } catch (e) {
-    console.error('[WS-WEB] Error enviando estado inicial:', e.message);
-  }
-
-  // Comandos del dashboard al ESP32
-  ws.on('message', (data) => {
-    try {
-      const cmd = JSON.parse(data.toString());
-      console.log(`[WS-WEB] Comando recibido: ${JSON.stringify(cmd)}`);
-      const ok = enviarComandoESP32(cmd);
-      if (!ok) {
-        ws.send(JSON.stringify({ tipo: 'error', mensaje: 'ESP32 no conectado — comando no enviado' }));
-      }
-    } catch (e) {
-      console.error('[WS-WEB] Error parseando comando:', e.message);
-    }
-  });
-
-  ws.on('close', (code, reason) => {
-    console.log(`[WS-WEB] Cliente ${ip} desconectado (${code})`);
-  });
-
-  ws.on('error', (err) => {
-    console.error(`[WS-WEB] Error: ${err.message}`);
-  });
-});
-
-// ── Broadcast a todos los clientes web ─────────────────────────
-function broadcastClientes(data) {
-  const msg = typeof data === 'string' ? data : JSON.stringify(data);
-  wssClientes.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(msg);
-    }
-  });
-}
-
-// ── Getters para las rutas ──────────────────────────────────────
+// ── Getters y helpers ───────────────────────────────────────────
 function getUltimoEstado() { return ultimoEstado; }
 function getHistorial()    { return obtenerHistorial; }
-function getESP32Status()  {
-  // Conectado si tuvo contacto en los últimos 2 minutos
-  return (Date.now() - esp32UltimoContacto) < 120000;
-}
+function getESP32Status()  { return (Date.now() - esp32UltimoContacto) < 120000; }
 
-// ── Enviar comando al ESP32 ─────────────────────────────────────
-// Primero intenta WebSocket (legacy), si no encola para HTTP polling
 function enviarComandoESP32(cmd) {
-  // Intentar WebSocket legacy
-  if (wsESP32 && wsESP32.readyState === WebSocket.OPEN) {
-    wsESP32.send(JSON.stringify(cmd));
-    console.log(`[ESP32-WS] Comando enviado por WS: ${JSON.stringify(cmd)}`);
-    return true;
-  }
-  // Encolar para HTTP polling (firmware v3.0.0)
   if (getESP32Status()) {
-    // Mantener máximo 5 comandos en cola; si llega el mismo cmd, reemplazar
     comandosPendientes = comandosPendientes.filter(c => c.cmd !== cmd.cmd);
     comandosPendientes.push(cmd);
     if (comandosPendientes.length > 5) comandosPendientes.shift();
-    console.log(`[ESP32-HTTP] Comando encolado: ${JSON.stringify(cmd)} (cola: ${comandosPendientes.length})`);
+    console.log(`[ESP32] Comando encolado: ${JSON.stringify(cmd)}`);
     return true;
   }
-  console.warn('[ESP32] No conectado — comando descartado:', cmd);
+  console.warn('[ESP32] Desconectado — comando descartado:', cmd);
   return false;
 }
 
-// ══════════════════════════════════════════════════════════════════
-// WEBSOCKET SERVER — ESP32 se conecta al servidor (path /esp32)
-// El ESP32 inicia la conexión hacia Render — no al revés
-// ══════════════════════════════════════════════════════════════════
-const wssESP32 = new WebSocketServer({ server: httpServer, path: '/esp32', perMessageDeflate: false });
-
-wssESP32.on('connection', (ws, req) => {
-  // Verificar clave secreta del ESP32
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const key = url.searchParams.get('key');
-  if (key !== (process.env.ESP32_SECRET || 'riego_esp32_2024')) {
-    console.warn('[ESP32] Conexión rechazada — clave inválida');
-    ws.close(1008, 'No autorizado');
-    return;
-  }
-
-  console.log('[ESP32] ✓ Conectado desde', req.socket.remoteAddress);
-  wsESP32        = ws;
-  esp32Conectado = true;
-  broadcastClientes({ tipo: 'conexion', esp32: true });
-
-  // Ping cada 25 seg para mantener viva la conexión en Render
-  const pingInterval = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ cmd: 'ping' }));
-  }, 25000);
-
-  ws.on('message', (data) => {
-    try {
-      const telemetria = JSON.parse(data.toString());
-      if (telemetria.tipo === 'pong') return;
-
-      telemetria.serverTimestamp = Date.now();
-      ultimoEstado = telemetria;
-
-      guardarHistorial({
-        ts:       Date.now(),
-        sensores: telemetria.sensores,
-        valvula:  telemetria.actuadores?.valvula,
-        alerta:   telemetria.alerta_encharcamiento || false
-      }).catch(e => console.error('[DB] Error guardando historial:', e.message));
-
-      broadcastClientes(telemetria);
-    } catch (e) {
-      console.error('[ESP32] Error parseando mensaje:', e.message);
-    }
-  });
-
-  ws.on('close', (code) => {
-    console.warn(`[ESP32] Desconectado (${code})`);
-    esp32Conectado = false;
-    wsESP32        = null;
-    clearInterval(pingInterval);
-    broadcastClientes({ tipo: 'conexion', esp32: false });
-  });
-
-  ws.on('error', (err) => console.error('[ESP32] Error WS:', err.message));
-});
-
-function conectarESP32() { /* no-op: ESP32 se conecta al servidor */ }
-
 // ── Arrancar servidor ───────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+const httpServer = http.createServer(app);
 
 initDB().then(() => {
   httpServer.listen(PORT, () => {
     console.log('\n╔══════════════════════════════════════════╗');
-    console.log('║   RIEGO IOT — Servidor v2.0 iniciado     ║');
+    console.log('║   RIEGO IOT — Servidor v4.0 iniciado     ║');
     console.log(`║   Puerto: ${PORT}                             ║`);
-    console.log('║   Dashboard: http://localhost:' + PORT + '      ║');
     console.log('╚══════════════════════════════════════════╝\n');
-    conectarESP32();
   });
 }).catch(e => {
   console.error('[DB] Error iniciando base de datos:', e.message);

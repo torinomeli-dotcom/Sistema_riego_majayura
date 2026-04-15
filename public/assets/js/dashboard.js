@@ -27,9 +27,6 @@ const SENSORES_CONFIG = [
 
 // ── Estado local ────────────────────────────────────────────────
 let estadoActual    = null;
-let wsReconectando  = false;
-let wsObj           = null;
-let timerReconectar = null;
 let timerValvula    = null;
 let segundosValvula = 0;
 let chartInstance   = null;
@@ -351,80 +348,60 @@ async function actualizarHistorial() {
   }
 }
 
-// ── WebSocket ───────────────────────────────────────────────────
-function conectarWS() {
-  if (wsObj && wsObj.readyState === WebSocket.OPEN) return;
+// ── SSE — Server-Sent Events (reemplaza WebSocket) ──────────────
+let sseObj = null;
 
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url   = `${proto}//${location.host}/ws?token=${TOKEN}`;
+function conectarSSE() {
+  if (sseObj) { sseObj.close(); sseObj = null; }
 
-  console.log('[WS] Conectando a', url);
-  wsObj = new WebSocket(url);
+  const url = `/api/eventos?token=${TOKEN}`;
+  console.log('[SSE] Conectando...');
+  sseObj = new EventSource(url);
 
-  wsObj.onopen = () => {
-    console.log('[WS] Conectado');
-    setWsStatus(true);
-    mostrarToast('Conexión establecida con el servidor', 'gray');
-    if (timerReconectar) { clearTimeout(timerReconectar); timerReconectar = null; }
+  sseObj.onopen = () => {
+    console.log('[SSE] Conectado');
+    setConexionStatus(true);
   };
 
-  wsObj.onmessage = (e) => {
+  sseObj.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data);
-      if (data.tipo === 'telemetria') {
-        actualizarUI(data);
-      } else if (data.tipo === 'error') {
-        mostrarToast('⚠️ ' + data.mensaje, 'red');
-      } else if (data.tipo === 'conexion') {
-        const wsDot = document.getElementById('wsDot');
-        if (!data.esp32) {
-          wsDot.style.background = '#f0c040';
-          document.getElementById('wsLabel').textContent = 'ESP32 offline';
-        }
-      }
+      if (data.tipo === 'telemetria') actualizarUI(data);
     } catch (err) {
-      console.warn('[WS] Error parseando:', err.message);
+      console.warn('[SSE] Error parseando:', err.message);
     }
   };
 
-  wsObj.onclose = (e) => {
-    console.warn('[WS] Desconectado, código:', e.code);
-    setWsStatus(false);
-    programarReconexionWS();
-  };
-
-  wsObj.onerror = (e) => {
-    console.warn('[WS] Error:', e.message || 'sin detalle');
-    // onclose se dispara después automáticamente
+  sseObj.onerror = () => {
+    // EventSource reconecta automáticamente — solo actualizar indicador
+    setConexionStatus(false);
+    console.warn('[SSE] Error / reconectando...');
   };
 }
 
-function setWsStatus(online) {
+function setConexionStatus(online) {
   const dot    = document.getElementById('wsDot');
   const label  = document.getElementById('wsLabel');
   const banner = document.getElementById('bannerReconectando');
 
   if (online) {
-    dot.className = 'ws-dot online';
+    dot.className     = 'ws-dot online';
     label.textContent = 'Online';
     banner.classList.remove('visible');
   } else {
-    dot.className = 'ws-dot';
-    label.textContent = 'Desconectado';
-    // Solo mostrar el banner si tampoco tenemos datos por HTTP
+    dot.className     = 'ws-dot';
+    label.textContent = 'Reconectando';
     if (!estadoActual) banner.classList.add('visible');
-    mostrarToast('Conexión perdida. Reconectando...', 'gray');
   }
 }
 
-// ── Polling HTTP de respaldo (funciona aunque falle el WebSocket) ──
+// ── Polling HTTP de respaldo (cada 35s aunque SSE falle) ─────────
 async function cargarEstadoHTTP() {
   try {
     const res = await fetch('/api/estado', {
       headers: { 'Authorization': 'Bearer ' + TOKEN }
     });
     if (res.status === 401) {
-      // Token expirado — redirigir al login
       mostrarToast('Sesión expirada. Redirigiendo...', 'red');
       setTimeout(() => cerrarSesion(), 2000);
       return;
@@ -433,36 +410,13 @@ async function cargarEstadoHTTP() {
     const data = await res.json();
     if (data && data.tipo === 'telemetria') {
       actualizarUI(data);
-      // Si tenemos datos, ocultar el banner de reconexión
       document.getElementById('bannerReconectando').classList.remove('visible');
-      // Actualizar indicador si WS está caído
-      if (!wsObj || wsObj.readyState !== WebSocket.OPEN) {
-        document.getElementById('wsDot').className = 'ws-dot online';
-        document.getElementById('wsLabel').textContent = 'Polling 30s';
-      }
     }
-  } catch (e) {
-    // Silencioso — el WS seguirá intentando
-  }
+  } catch (_) { /* silencioso */ }
 }
 
-function programarReconexionWS() {
-  if (timerReconectar) return;
-  timerReconectar = setTimeout(() => {
-    timerReconectar = null;
-    conectarWS();
-  }, 3000);
-}
-
-// ── Enviar comandos al servidor ─────────────────────────────────
+// ── Enviar comandos al servidor (siempre por REST) ───────────────
 async function enviarComando(payload) {
-  // Intento 1: por WebSocket (más rápido)
-  if (wsObj && wsObj.readyState === WebSocket.OPEN) {
-    wsObj.send(JSON.stringify(payload));
-    return;
-  }
-
-  // Intento 2: por REST API como fallback
   try {
     const res = await fetch('/api/comando', {
       method: 'POST',
@@ -601,13 +555,12 @@ function tiempoRelativo(ts) {
 document.addEventListener('DOMContentLoaded', () => {
   inicializarSensores();
 
-  // Cargar estado inmediatamente por HTTP
+  // Cargar estado inicial por HTTP inmediatamente
   cargarEstadoHTTP();
 
-  // Polling HTTP cada 35 segundos (el ESP32 envía cada 30s)
-  // Funciona aunque el WebSocket falle
+  // Polling HTTP de respaldo cada 35s
   setInterval(cargarEstadoHTTP, 35000);
 
-  // Intentar WebSocket para actualizaciones en tiempo real
-  conectarWS();
+  // SSE para actualizaciones en tiempo real (reemplaza WebSocket)
+  conectarSSE();
 });
