@@ -17,10 +17,8 @@ const rateLimit  = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const apiRoutes  = require('./routes/api');
+const { initDB, guardarHistorial, obtenerHistorial } = require('./database');
 
-// ── Historial circular — últimas 100 lecturas ───────────────────
-const MAX_HISTORIAL = 100;
-const historial = [];
 let ultimoEstado = null;
 let esp32Conectado = false;
 let wsESP32 = null;  // Conexión WebSocket con el ESP32
@@ -145,7 +143,7 @@ function broadcastClientes(data) {
 
 // ── Getters para las rutas ──────────────────────────────────────
 function getUltimoEstado() { return ultimoEstado; }
-function getHistorial()    { return historial; }
+function getHistorial()    { return obtenerHistorial; } // función async, api.js la llama
 function getESP32Status()  { return esp32Conectado; }
 
 // ── Enviar comando al ESP32 ─────────────────────────────────────
@@ -212,14 +210,13 @@ function conectarESP32() {
       telemetria.serverTimestamp = Date.now();
       ultimoEstado = telemetria;
 
-      // Guardar en historial circular
-      historial.push({
+      // Guardar en PostgreSQL
+      guardarHistorial({
         ts:       Date.now(),
         sensores: telemetria.sensores,
         valvula:  telemetria.actuadores?.valvula,
-        alerta:   telemetria.alerta_encharcamiento
-      });
-      if (historial.length > MAX_HISTORIAL) historial.shift();
+        alerta:   telemetria.alerta_encharcamiento || false
+      }).catch(e => console.error('[DB] Error guardando historial:', e.message));
 
       // Reenviar a todos los clientes web
       broadcastClientes(telemetria);
@@ -257,13 +254,17 @@ function programarReconexion() {
 
 // ── Arrancar servidor ───────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log('\n╔══════════════════════════════════════════╗');
-  console.log('║   RIEGO IOT — Servidor v2.0 iniciado     ║');
-  console.log(`║   Puerto: ${PORT}                             ║`);
-  console.log('║   Dashboard: http://localhost:' + PORT + '      ║');
-  console.log('╚══════════════════════════════════════════╝\n');
 
-  // Conectar al ESP32 al arrancar
-  conectarESP32();
+initDB().then(() => {
+  httpServer.listen(PORT, () => {
+    console.log('\n╔══════════════════════════════════════════╗');
+    console.log('║   RIEGO IOT — Servidor v2.0 iniciado     ║');
+    console.log(`║   Puerto: ${PORT}                             ║`);
+    console.log('║   Dashboard: http://localhost:' + PORT + '      ║');
+    console.log('╚══════════════════════════════════════════╝\n');
+    conectarESP32();
+  });
+}).catch(e => {
+  console.error('[DB] Error iniciando base de datos:', e.message);
+  process.exit(1);
 });
