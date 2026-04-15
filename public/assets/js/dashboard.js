@@ -399,8 +399,8 @@ function conectarWS() {
 }
 
 function setWsStatus(online) {
-  const dot   = document.getElementById('wsDot');
-  const label = document.getElementById('wsLabel');
+  const dot    = document.getElementById('wsDot');
+  const label  = document.getElementById('wsLabel');
   const banner = document.getElementById('bannerReconectando');
 
   if (online) {
@@ -410,8 +410,38 @@ function setWsStatus(online) {
   } else {
     dot.className = 'ws-dot';
     label.textContent = 'Desconectado';
-    banner.classList.add('visible');
+    // Solo mostrar el banner si tampoco tenemos datos por HTTP
+    if (!estadoActual) banner.classList.add('visible');
     mostrarToast('Conexión perdida. Reconectando...', 'gray');
+  }
+}
+
+// ── Polling HTTP de respaldo (funciona aunque falle el WebSocket) ──
+async function cargarEstadoHTTP() {
+  try {
+    const res = await fetch('/api/estado', {
+      headers: { 'Authorization': 'Bearer ' + TOKEN }
+    });
+    if (res.status === 401) {
+      // Token expirado — redirigir al login
+      mostrarToast('Sesión expirada. Redirigiendo...', 'red');
+      setTimeout(() => cerrarSesion(), 2000);
+      return;
+    }
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.tipo === 'telemetria') {
+      actualizarUI(data);
+      // Si tenemos datos, ocultar el banner de reconexión
+      document.getElementById('bannerReconectando').classList.remove('visible');
+      // Actualizar indicador si WS está caído
+      if (!wsObj || wsObj.readyState !== WebSocket.OPEN) {
+        document.getElementById('wsDot').className = 'ws-dot online';
+        document.getElementById('wsLabel').textContent = 'Polling 30s';
+      }
+    }
+  } catch (e) {
+    // Silencioso — el WS seguirá intentando
   }
 }
 
@@ -569,28 +599,14 @@ function tiempoRelativo(ts) {
 // ── INICIO ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   inicializarSensores();
+
+  // Cargar estado inmediatamente por HTTP
+  cargarEstadoHTTP();
+
+  // Polling HTTP cada 35 segundos (el ESP32 envía cada 30s)
+  // Funciona aunque el WebSocket falle
+  setInterval(cargarEstadoHTTP, 35000);
+
+  // Intentar WebSocket para actualizaciones en tiempo real
   conectarWS();
-
-  // Cargar estado inicial por REST mientras carga el WS
-  fetch('/api/estado', {
-    headers: { 'Authorization': 'Bearer ' + TOKEN }
-  })
-  .then(r => r.ok ? r.json() : null)
-  .then(data => {
-    if (data && data.tipo === 'telemetria') actualizarUI(data);
-  })
-  .catch(() => {});
-
-  // Verificar token periódicamente (cada 30 min)
-  setInterval(() => {
-    fetch('/api/auth/verificar', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + TOKEN }
-    }).then(r => r.json()).then(d => {
-      if (!d.valido) {
-        mostrarToast('Sesión expirada. Redirigiendo...', 'red');
-        setTimeout(() => cerrarSesion(), 2000);
-      }
-    }).catch(() => {});
-  }, 30 * 60 * 1000);
 });
