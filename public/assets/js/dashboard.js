@@ -387,14 +387,15 @@ function conectarWS() {
     }
   };
 
-  wsObj.onclose = () => {
-    console.warn('[WS] Desconectado');
+  wsObj.onclose = (e) => {
+    console.warn('[WS] Desconectado, código:', e.code);
     setWsStatus(false);
     programarReconexionWS();
   };
 
-  wsObj.onerror = () => {
-    // onclose se dispara después
+  wsObj.onerror = (e) => {
+    console.warn('[WS] Error:', e.message || 'sin detalle');
+    // onclose se dispara después automáticamente
   };
 }
 

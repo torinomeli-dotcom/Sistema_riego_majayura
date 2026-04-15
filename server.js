@@ -130,6 +130,13 @@ const httpServer = http.createServer(app);
 // ── WebSocket Server — Clientes Web (Dashboard) ─────────────────
 const wssClientes = new WebSocketServer({ server: httpServer, path: '/ws', perMessageDeflate: false });
 
+// Ping a todos los navegadores cada 25s para mantener la conexión viva en Render
+setInterval(() => {
+  wssClientes.clients.forEach(ws => {
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
+  });
+}, 25000);
+
 wssClientes.on('connection', (ws, req) => {
   // Verificar token JWT en query param
   const url    = new URL(req.url, `http://${req.headers.host}`);
@@ -145,17 +152,24 @@ wssClientes.on('connection', (ws, req) => {
   }
 
   const ip = req.socket.remoteAddress;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   console.log(`[WS-WEB] Cliente conectado desde ${ip}`);
 
   // Enviar estado actual inmediatamente
-  if (ultimoEstado) {
-    ws.send(JSON.stringify(ultimoEstado));
-  } else {
-    ws.send(JSON.stringify({
-      tipo: 'info',
-      mensaje: 'Esperando datos del ESP32...',
-      esp32Conectado: false
-    }));
+  try {
+    if (ultimoEstado) {
+      ws.send(JSON.stringify(ultimoEstado));
+    } else {
+      ws.send(JSON.stringify({
+        tipo: 'info',
+        mensaje: 'Esperando datos del ESP32...',
+        esp32Conectado: false
+      }));
+    }
+  } catch (e) {
+    console.error('[WS-WEB] Error enviando estado inicial:', e.message);
   }
 
   // Comandos del dashboard al ESP32
@@ -172,8 +186,8 @@ wssClientes.on('connection', (ws, req) => {
     }
   });
 
-  ws.on('close', () => {
-    console.log(`[WS-WEB] Cliente ${ip} desconectado`);
+  ws.on('close', (code, reason) => {
+    console.log(`[WS-WEB] Cliente ${ip} desconectado (${code})`);
   });
 
   ws.on('error', (err) => {
