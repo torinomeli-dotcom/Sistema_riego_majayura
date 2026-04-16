@@ -426,7 +426,7 @@ async function cargarEstadoHTTP() {
   } catch (_) { /* silencioso */ }
 }
 
-// ── Enviar comandos al servidor (siempre por REST) ───────────────
+// ── Enviar comandos al servidor ──────────────────────────────────
 async function enviarComando(payload) {
   try {
     const res = await fetch('/api/comando', {
@@ -440,7 +440,11 @@ async function enviarComando(payload) {
     if (!res.ok) {
       const err = await res.json();
       mostrarToast('Error: ' + (err.error || 'Sin respuesta'), 'red');
+      return;
     }
+    // Confirmar estado a los 2s (ESP32 recibe → ejecuta → responde vía WS)
+    // Si el WS ya entregó la actualización, esta llamada es redundante pero inofensiva
+    setTimeout(cargarEstadoHTTP, 2000);
   } catch (e) {
     mostrarToast('No se pudo enviar el comando', 'red');
   }
