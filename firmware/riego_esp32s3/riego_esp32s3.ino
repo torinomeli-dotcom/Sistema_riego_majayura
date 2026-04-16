@@ -130,6 +130,7 @@ bool bombillo2On          = false;
 bool modoAuto             = true;
 bool alertaEncharcamiento = false;
 bool tanqueLleno          = true;
+bool otaFallo             = false;
 bool ntpOk                = false;
 bool wifiConectado        = false;
 bool wsConectado          = false;
@@ -569,6 +570,7 @@ String construirJSON() {
   doc["alerta_encharcamiento"] = alertaEncharcamiento;
   doc["tanque_lleno"]          = tanqueLleno;
   doc["motivo_riego"]          = motivoRiego;
+  if (otaFallo) { doc["ota_fallo"] = true; otaFallo = false; }
   doc["modo_auto"]             = modoAuto;
 
   JsonObject cal = doc.createNestedObject("calibracion");
@@ -761,7 +763,7 @@ void actualizarFirmwareOTA(const char* url) {
     case HTTP_UPDATE_FAILED:
       Serial.printf("[OTA] FALLO: %s\n", httpUpdate.getLastErrorString().c_str());
       lcdMsg("OTA: FALLO!     ", "Ver monitor...");
-      // Reconectar WS
+      otaFallo = true;
       wsClient.beginSSL(WS_HOST, WS_PORT, WS_PATH);
       break;
     case HTTP_UPDATE_NO_UPDATES:

@@ -938,6 +938,60 @@ body {
   border-left: 3px solid var(--blue);
 }
 
+/* ── OTA PROGRESO ────────────────────────────────────────────── */
+.ota-estado-txt {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+.ota-progress-wrap {
+  background: var(--bg);
+  border-radius: 99px;
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+.ota-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  transition: width 0.8s ease;
+}
+.ota-progress-fill.fallo {
+  background: var(--red);
+  transition: width 0.3s ease;
+}
+.ota-progress-pct {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 1rem;
+}
+.ota-aviso {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+.ota-resultado-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+.ota-resultado-msg {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.ota-resultado-msg.exito { color: var(--green); }
+.ota-resultado-msg.fallo { color: var(--red); }
+
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .navbar { padding: 0 1rem; }

@@ -491,22 +491,22 @@ function conectarWS() {
         esp32Online = data.conectado;
         actualizarIndicadorESP32();
 
-        if (otaEnProgreso) {
-          if (!data.conectado) {
-            // ESP32 se desconectó — está instalando el firmware
-            otaMensaje('info', '⚙ Instalando firmware... el ESP32 se reiniciará solo.');
-          } else {
-            // ESP32 reconectó — OTA exitoso
-            otaEnProgreso = false;
-            clearTimeout(otaTimeout);
-            otaMensaje('ok', '✅ ¡Firmware actualizado con éxito! ESP32 reconectado.');
-            document.getElementById('btnEnviarOTA').textContent = '✓ Actualización completa';
-            mostrarToast('✅ OTA completado — ESP32 reconectado', 'success');
-          }
+        if (otaEnProgreso && data.conectado) {
+          // ESP32 reconectó — esperamos la telemetría para confirmar éxito o fallo
+          const txt = document.getElementById('otaEstadoTxt');
+          if (txt) txt.textContent = '🔗 ESP32 reconectado — verificando...';
         }
       } else if (data.sensores || data.tipo === 'telemetria') {
         esp32Online = true;
         actualizarIndicadorESP32();
+        if (otaEnProgreso) {
+          // Primera telemetría tras OTA — determinar resultado
+          if (data.ota_fallo) {
+            otaResultado(false);
+          } else {
+            otaResultado(true);
+          }
+        }
         actualizarUI(data);
       }
     } catch (err) {
@@ -627,16 +627,73 @@ window.toggleTema = () => {
   aplicarTema(actual === 'dark' ? 'light' : 'dark');
 };
 
-function otaMensaje(tipo, texto) {
-  const msg = document.getElementById('msgOTA');
-  if (!msg) return;
-  msg.className = `modal-msg ${tipo}`;
-  msg.textContent = texto;
+// ── Modal OTA ───────────────────────────────────────────────────
+let otaProgressInterval = null;
+let otaProgressVal      = 0;
+
+function otaFase(fase) {
+  document.getElementById('otaFaseForm').style.display      = fase === 'form'      ? '' : 'none';
+  document.getElementById('otaFaseProgreso').style.display  = fase === 'progreso'  ? '' : 'none';
+  document.getElementById('otaFaseResultado').style.display = fase === 'resultado' ? '' : 'none';
 }
 
-// ── Modal OTA ───────────────────────────────────────────────────
-window.abrirModalOTA = () => {
+function otaSetProgress(pct, fallo = false) {
+  otaProgressVal = pct;
+  const fill = document.getElementById('otaProgressFill');
+  const lbl  = document.getElementById('otaProgressPct');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('fallo', fallo);
+  lbl.textContent  = pct + '%';
+  lbl.style.color  = fallo ? 'var(--red)' : pct === 100 ? 'var(--green)' : 'var(--blue)';
+}
+
+function otaIniciarBarraSimulada() {
+  // 0→85% en ~75s (descarga), luego frena esperando reconexión
+  clearInterval(otaProgressInterval);
+  otaProgressVal = 0;
+  otaSetProgress(0);
+  otaProgressInterval = setInterval(() => {
+    if (otaProgressVal < 85) {
+      otaProgressVal = Math.min(otaProgressVal + 1, 85);
+      otaSetProgress(otaProgressVal);
+      const txt = document.getElementById('otaEstadoTxt');
+      if (otaProgressVal < 40)       txt.textContent = '📡 Descargando firmware...';
+      else if (otaProgressVal < 75)  txt.textContent = '⚙ Instalando firmware...';
+      else                           txt.textContent = '🔄 Esperando reinicio del ESP32...';
+    }
+  }, 900);
+}
+
+function otaResultado(exito) {
+  clearInterval(otaProgressInterval);
+  clearTimeout(otaTimeout);
+  otaEnProgreso = false;
+
+  otaSetProgress(exito ? 100 : otaProgressVal, !exito);
+  otaFase('resultado');
+
+  document.getElementById('otaResultadoIcon').textContent = exito ? '✅' : '❌';
+  const msg = document.getElementById('otaResultadoMsg');
+  msg.className   = `ota-resultado-msg ${exito ? 'exito' : 'fallo'}`;
+  msg.textContent = exito
+    ? '¡Firmware actualizado con éxito! El ESP32 está en línea.'
+    : 'La actualización falló. Verifica la URL y vuelve a intentarlo.';
+
+  document.getElementById('btnOtaReintentar').style.display = exito ? 'none' : '';
+  if (exito) mostrarToast('✅ OTA completado — ESP32 reconectado', 'success');
+  else       mostrarToast('❌ OTA falló — ESP32 reportó error', 'red');
+}
+
+window.reiniciarOTA = () => {
+  otaFase('form');
   document.getElementById('otaUrl').value = '';
+  document.getElementById('msgOTA').textContent = '';
+};
+
+window.abrirModalOTA = () => {
+  otaFase('form');
+  document.getElementById('otaUrl').value = '';
+  document.getElementById('msgOTA').className = 'modal-msg';
   document.getElementById('msgOTA').textContent = '';
   document.getElementById('btnEnviarOTA').disabled = false;
   document.getElementById('btnEnviarOTA').textContent = 'Actualizar ESP32';
@@ -644,6 +701,9 @@ window.abrirModalOTA = () => {
 };
 
 window.cerrarModalOTA = () => {
+  if (otaEnProgreso) return; // no cerrar durante actualización activa
+  clearInterval(otaProgressInterval);
+  clearTimeout(otaTimeout);
   document.getElementById('modalOTA').classList.remove('open');
 };
 
@@ -659,10 +719,6 @@ window.enviarOTA = async () => {
   }
 
   btn.disabled = true;
-  btn.textContent = 'Enviando al ESP32...';
-  msg.className = 'modal-msg';
-  msg.textContent = 'El ESP32 descargará y se actualizará solo. Tardará 1–3 minutos y se reiniciará.';
-
   try {
     const res = await fetch('/api/comando', {
       method: 'POST',
@@ -671,29 +727,22 @@ window.enviarOTA = async () => {
     });
     if (res.ok) {
       otaEnProgreso = true;
-      otaMensaje('info', '📡 Descargando firmware... espera que el ESP32 se desconecte.');
-      btn.textContent = 'Actualizando...';
-      // Watchdog: si en 5 min no reconecta, mostrar advertencia
+      otaFase('progreso');
+      otaIniciarBarraSimulada();
+      // Watchdog 5 min
       otaTimeout = setTimeout(() => {
-        if (otaEnProgreso) {
-          otaEnProgreso = false;
-          otaMensaje('err', '⚠ Sin respuesta en 5 min. Verifica el ESP32 — puede haber fallado.');
-          document.getElementById('btnEnviarOTA').disabled = false;
-          document.getElementById('btnEnviarOTA').textContent = 'Reintentar';
-        }
+        if (otaEnProgreso) otaResultado(false);
       }, 300000);
     } else {
       const e = await res.json();
       msg.className = 'modal-msg err';
       msg.textContent = e.error || 'Error enviando comando.';
       btn.disabled = false;
-      btn.textContent = 'Actualizar ESP32';
     }
   } catch {
     msg.className = 'modal-msg err';
     msg.textContent = 'Error de conexión con el servidor.';
     btn.disabled = false;
-    btn.textContent = 'Actualizar ESP32';
   }
 };
 
