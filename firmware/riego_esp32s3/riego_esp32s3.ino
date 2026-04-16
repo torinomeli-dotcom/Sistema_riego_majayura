@@ -313,7 +313,7 @@ void loop() {
   }
 
   // Sensor tanque — lectura en cada loop con antirrebote (5 lecturas consecutivas)
-  bool pinTanque = (digitalRead(PIN_TANQUE) == HIGH);
+  bool pinTanque = (digitalRead(PIN_TANQUE) == LOW);
   if (pinTanque != tanqueLleno) {
     contadorTanque++;
     if (contadorTanque >= DEBOUNCE_TANQUE) {
