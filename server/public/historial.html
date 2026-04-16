@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riego IOT — Big Data Analytics</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <style>
+    /* ── ANALYTICS PAGE ───────────────────────────────────────── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .page-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .page-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      font-family: var(--font-mono);
+    }
+
+    /* ── RANGO SELECTOR ──────────────────────────────────────── */
+    .rango-selector {
+      display: flex;
+      gap: 0.35rem;
+    }
+    .btn-rango {
+      padding: 0.4rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-sub);
+      background: var(--card);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .btn-rango:hover { background: var(--border); color: var(--text); }
+    .btn-rango.active {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border-color: rgba(88,166,255,0.4);
+    }
+    [data-theme="light"] .btn-rango.active {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border-color: rgba(9,105,218,0.35);
+    }
+
+    /* ── STAT CARDS ──────────────────────────────────────────── */
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .stat-card:hover {
+      border-color: var(--border-sub);
+      box-shadow: var(--shadow);
+    }
+    .stat-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .stat-card.blue  { border-left: 3px solid var(--blue);   }
+    .stat-card.green { border-left: 3px solid var(--green);  }
+    .stat-card.red   { border-left: 3px solid var(--red);    }
+    .stat-card.yellow{ border-left: 3px solid var(--yellow); }
+    .stat-card.orange{ border-left: 3px solid var(--orange); }
+    .stat-val.blue   { color: var(--blue);   }
+    .stat-val.green  { color: var(--green);  }
+    .stat-val.red    { color: var(--red);    }
+    .stat-val.yellow { color: var(--yellow); }
+    .stat-val.orange { color: var(--orange); }
+
+    /* ── CHART CARDS ─────────────────────────────────────────── */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .chart-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .chart-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .chart-area-lg { height: 280px; position: relative; }
+    .chart-area-md { height: 220px; position: relative; }
+    .chart-area-sm { height: 200px; position: relative; }
+
+    /* ── HUMEDAD PROMS ───────────────────────────────────────── */
+    .hum-prom-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .hum-prom-item {
+      flex: 1;
+      min-width: 70px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.8rem;
+      text-align: center;
+    }
+    .hum-prom-val {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .hum-prom-lbl {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* ── LOADING OVERLAY ─────────────────────────────────────── */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      z-index: 10;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      gap: 0.5rem;
+    }
+    .loading-overlay.hidden { display: none; }
+
+    /* ── SIN DATOS ───────────────────────────────────────────── */
+    .sin-datos {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .sin-datos-icon { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── TOAST CONTAINER ──────────────────────────────────────────── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ── NAVBAR ────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="nav-icon">🌱</span>
+    <div>
+      <div class="nav-title">RIEGO IOT — MAJAYURA</div>
+      <div class="nav-sub">Big Data Analytics · La Guajira</div>
+    </div>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-tema" id="btnTema" onclick="toggleTema()" title="Cambiar tema">🌙</button>
+    <a class="btn-nav" href="/" style="text-decoration:none">🏠 Dashboard</a>
+    <button class="btn-nav" onclick="cerrarSesion()">Salir</button>
+  </div>
+</nav>
+
+<!-- ── MAIN CONTENT ──────────────────────────────────────────────── -->
+<div class="container-fluid px-3 px-md-4 mt-4">
+
+  <!-- ── ENCABEZADO + RANGO ───────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">📊 Historial &amp; Estadísticas</div>
+      <div class="page-sub" id="subInfo">Cargando datos...</div>
+    </div>
+    <div class="rango-selector">
+      <button class="btn-rango active" id="rango24h" onclick="cambiarRango('24h')">24H</button>
+      <button class="btn-rango"        id="rango7d"  onclick="cambiarRango('7d')">7D</button>
+      <button class="btn-rango"        id="rango30d" onclick="cambiarRango('30d')">30D</button>
+    </div>
+  </div>
+
+  <!-- ── STAT CARDS ───────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card blue">
+        <div class="stat-icon">📡</div>
+        <div>
+          <div class="stat-val blue" id="statLecturas">—</div>
+          <div class="stat-label">Lecturas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card green">
+        <div class="stat-icon">💧</div>
+        <div>
+          <div class="stat-val green" id="statMinRiego">—</div>
+          <div class="stat-label">Min riego</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card yellow">
+        <div class="stat-icon">🔄</div>
+        <div>
+          <div class="stat-val yellow" id="statActivaciones">—</div>
+          <div class="stat-label">Activaciones</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card red">
+        <div class="stat-icon">⚠️</div>
+        <div>
+          <div class="stat-val red" id="statAlertas">—</div>
+          <div class="stat-label">Alertas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card orange">
+        <div class="stat-icon">🌿</div>
+        <div>
+          <div class="stat-val orange" id="statHumDer">—</div>
+          <div class="stat-label">Hum. DER prom</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="stat-card" style="border-left:3px solid var(--blue)">
+        <div class="stat-icon">🌡️</div>
+        <div>
+          <div class="stat-val" id="statHumIzq" style="color:var(--blue)">—</div>
+          <div class="stat-label">Hum. IZQ prom</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GRÁFICO TENDENCIA HUMEDAD ─────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="chart-card">
+        <div class="chart-title">
+          📈 Tendencia de Humedad por Zona
+          <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">
+            — promedio por período
+          </span>
+        </div>
+        <div class="chart-desc">
+          <span class="legend-dot" style="background:#58a6ff"></span> IZQ (2m) &nbsp;
+          <span class="legend-dot" style="background:#f0c040"></span> CTR (7.5m) &nbsp;
+          <span class="legend-dot" style="background:#3fb950"></span> DER (13m)
+          &nbsp; · Línea roja = umbral SECO (32%) · Línea verde = umbral HÚMEDO (56%)
+        </div>
+        <div class="chart-area-lg" style="position:relative">
+          <div class="loading-overlay" id="loadTendencia">
+            <span class="spinner-border spinner-border-sm"></span> Cargando...
+          </div>
+          <canvas id="chartTendencia"></canvas>
+        </div>
+        <div class="hum-prom-row">
+          <div class="hum-prom-item">
+            <div class="hum-prom-val" id="promIzq" style="color:var(--blue)">—</div>
+            <div class="hum-prom-lbl">Promedio IZQ</div>
+          </div>
+          <div class="hum-prom-item">
+            <div class="hum-prom-val" id="promCtr" style="color:var(--yellow)">—</div>
+            <div class="hum-prom-lbl">Promedio CTR</div>
+          </div>
+          <div class="hum-prom-item">
+            <div class="hum-prom-val" id="promDer" style="color:var(--green)">—</div>
+            <div class="hum-prom-lbl">Promedio DER</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIEGO + DISTRIBUCIÓN ──────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <!-- Barras de riego -->
+    <div class="col-12 col-lg-8">
+      <div class="chart-card">
+        <div class="chart-title">💧 Tiempo de Riego por Período</div>
+        <div class="chart-desc">Minutos de riego activo agrupado por hora (24H) o día (7D/30D)</div>
+        <div class="chart-area-md" style="position:relative">
+          <div class="loading-overlay" id="loadRiego">
+            <span class="spinner-border spinner-border-sm"></span> Cargando...
+          </div>
+          <canvas id="chartRiego"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donut distribución -->
+    <div class="col-12 col-lg-4">
+      <div class="chart-card" style="height:100%">
+        <div class="chart-title">🌡️ Distribución de Lecturas</div>
+        <div class="chart-desc">
+          Estado predominante de los 8 sensores durante el período
+        </div>
+        <div class="chart-area-sm" style="position:relative">
+          <div class="loading-overlay" id="loadDist">
+            <span class="spinner-border spinner-border-sm"></span> Cargando...
+          </div>
+          <canvas id="chartDistribucion"></canvas>
+        </div>
+        <div id="distLeyenda" style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIN DATOS ─────────────────────────────────────────────── -->
+  <div class="sin-datos" id="sinDatos" style="display:none">
+    <span class="sin-datos-icon">📭</span>
+    No hay datos registrados para el período seleccionado.<br>
+    El ESP32 debe estar conectado al servidor y enviando telemetría.
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/historial.js"></script>
+</body>
+</html>
