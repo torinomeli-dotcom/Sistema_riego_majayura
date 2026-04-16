@@ -55,6 +55,7 @@ function inicializarSensores() {
         </div>
         <div class="sensor-valores">
           <span class="sensor-pct pct-humedo" id="pct_${cfg.id}">50%</span>
+          <span class="sensor-adc" id="adc_${cfg.id}">ADC ---</span>
         </div>
         <div class="sensor-tiempo" id="tiempo_${cfg.id}">--</div>
       </div>`;
@@ -82,6 +83,7 @@ function actualizarUI(data) {
     const badge  = document.getElementById(`badge_${cfg.id}`);
     const barra  = document.getElementById(`barra_${cfg.id}`);
     const pct    = document.getElementById(`pct_${cfg.id}`);
+    const adcEl  = document.getElementById(`adc_${cfg.id}`);
     const tiempo = document.getElementById(`tiempo_${cfg.id}`);
 
     const estado = info.estado || 'HUMEDO';
@@ -97,6 +99,9 @@ function actualizarUI(data) {
     badge.className = `badge-estado badge-${estado}`;
     const labels = { HUMEDO: 'HÚMEDO', SECO: 'SECO', ENCHARCADO: '⚠ ENCHARCADO' };
     badge.textContent = labels[estado] || estado;
+
+    // ADC crudo para calibración
+    if (adcEl) adcEl.textContent = `ADC ${adc}`;
 
     // Barra de humedad
     barra.style.width = humPct + '%';
