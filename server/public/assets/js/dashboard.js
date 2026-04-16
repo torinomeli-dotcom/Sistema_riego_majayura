@@ -213,6 +213,7 @@ function actualizarUI(data) {
     estadoEl.className   = `act-estado${on ? ' on' : ''}`;
 
     document.getElementById('valvulaIcon').textContent = on ? '💧' : '🔒';
+    document.getElementById('valvulaIcon').style.fontSize = on ? '2rem' : '2.2rem';
 
     const badgeModo = document.getElementById('badgeModoValvula');
     badgeModo.textContent = modo;
@@ -274,12 +275,21 @@ function actualizarUI(data) {
   const cardTanque     = document.getElementById('cardTanque');
   const estadoTanqueEl = document.getElementById('estadoTanque');
   const tanqueInfo     = document.getElementById('tanqueInfo');
-  const tanqueIcon     = document.getElementById('tanqueIcon');
+  const tanqueFill     = document.getElementById('tanqueFill');
+  const tanqueOla      = document.getElementById('tanqueOla');
 
+  const prevVacio = cardTanque.classList.contains('tanque-vacio');
   cardTanque.classList.toggle('tanque-vacio', !tanqueLleno);
+
+  // Trigger animación shake al vaciarse
+  if (!tanqueLleno && !prevVacio) {
+    const cuerpo = cardTanque.querySelector('.tanque-cuerpo');
+    cuerpo.style.animation = 'none';
+    requestAnimationFrame(() => { cuerpo.style.animation = ''; });
+  }
+
   estadoTanqueEl.textContent = tanqueLleno ? 'CON AGUA' : 'VACÍO';
   estadoTanqueEl.className   = `act-estado${tanqueLleno ? ' on' : ' tanque-alerta'}`;
-  tanqueIcon.textContent     = tanqueLleno ? '🪣' : '⚠️';
   tanqueInfo.textContent     = tanqueLleno
     ? 'Suministro de agua disponible'
     : 'Sin agua — válvula bloqueada';
@@ -319,6 +329,7 @@ function actualizarBombillo(cardId, estadoId, iconId, on, prevOn, num) {
   est.textContent  = on ? 'ENCENDIDA' : 'APAGADA';
   est.className    = `act-estado${on ? ' encendido' : ''}`;
   document.getElementById(iconId).textContent = on ? '💡' : '🔦';
+  document.getElementById(iconId).style.fontSize = on ? '2rem' : '2.2rem';
   if (on !== prevOn && prevOn !== undefined) {
     mostrarToast(`💡 Luz ${num} ${on ? 'encendida' : 'apagada'}`, 'yellow');
   }

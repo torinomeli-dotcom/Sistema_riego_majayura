@@ -992,6 +992,168 @@ body {
 .ota-resultado-msg.exito { color: var(--green); }
 .ota-resultado-msg.fallo { color: var(--red); }
 
+/* ── ANIMACIONES ACTUADORES ──────────────────────────────────── */
+
+/* Wrapper posicionado para animaciones */
+.act-icon-anim {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+}
+
+/* ── VÁLVULA — gotas cayendo ────────────────────────────────── */
+.gotas {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  pointer-events: none;
+}
+.gotas i {
+  display: block;
+  width: 5px;
+  height: 7px;
+  background: var(--blue);
+  border-radius: 50% 50% 60% 60%;
+  opacity: 0;
+}
+.card-act.valvula-on .gotas i {
+  animation: gotaCae 1.4s ease-in infinite;
+}
+.card-act.valvula-on .gotas i:nth-child(2) { animation-delay: 0.45s; }
+.card-act.valvula-on .gotas i:nth-child(3) { animation-delay: 0.9s;  }
+
+@keyframes gotaCae {
+  0%   { opacity: 0;   transform: translateY(0px); }
+  15%  { opacity: 0.9; }
+  100% { opacity: 0;   transform: translateY(16px); }
+}
+
+/* Válvula abierta — icono rebota levemente */
+.card-act.valvula-on .act-icon {
+  animation: valvulaPulse 1.4s ease-in-out infinite;
+}
+@keyframes valvulaPulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px var(--blue)); }
+  50%       { transform: scale(1.12); filter: drop-shadow(0 0 14px var(--blue)); }
+}
+
+/* ── BOMBILLOS — rayos de luz ───────────────────────────────── */
+.act-icon-anim::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    transparent 0deg,   rgba(240,192,64,0.35) 15deg,  transparent 30deg,
+    transparent 60deg,  rgba(240,192,64,0.35) 75deg,  transparent 90deg,
+    transparent 120deg, rgba(240,192,64,0.35) 135deg, transparent 150deg,
+    transparent 180deg, rgba(240,192,64,0.35) 195deg, transparent 210deg,
+    transparent 240deg, rgba(240,192,64,0.35) 255deg, transparent 270deg,
+    transparent 300deg, rgba(240,192,64,0.35) 315deg, transparent 330deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.card-act.bombillo-on .act-icon-anim::before {
+  opacity: 1;
+  animation: rotarRayos 4s linear infinite;
+}
+@keyframes rotarRayos {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+.card-act.bombillo-on .act-icon {
+  animation: luzBrilla 1.6s ease-in-out infinite;
+}
+@keyframes luzBrilla {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--yellow));  transform: scale(1);    }
+  50%       { filter: drop-shadow(0 0 18px var(--yellow)); transform: scale(1.14); }
+}
+
+/* ── TANQUE — gráfico CSS ───────────────────────────────────── */
+.tanque-vis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.tanque-tapa {
+  width: 22px;
+  height: 5px;
+  background: var(--blue);
+  border-radius: 3px 3px 0 0;
+  transition: background 0.4s;
+}
+.tanque-cuerpo {
+  width: 40px;
+  height: 42px;
+  border: 2.5px solid var(--blue);
+  border-radius: 3px 3px 5px 5px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  transition: border-color 0.4s;
+}
+.tanque-fill {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 72%;
+  background: linear-gradient(180deg, rgba(88,166,255,0.5) 0%, rgba(88,166,255,0.85) 100%);
+  transition: height 0.9s ease, background 0.4s;
+}
+.tanque-ola {
+  position: absolute;
+  bottom: 0; left: -50%; right: -50%;
+  height: 72%;
+  border-top: 3px solid rgba(88,166,255,0.7);
+  border-radius: 40% 40% 0 0;
+  animation: olaMovimiento 2.2s ease-in-out infinite;
+  transition: height 0.9s ease;
+  pointer-events: none;
+}
+@keyframes olaMovimiento {
+  0%, 100% { transform: translateX(0px) scaleX(1);    }
+  50%       { transform: translateX(8px)  scaleX(1.05); }
+}
+.tanque-base {
+  width: 46px;
+  height: 4px;
+  background: var(--blue);
+  border-radius: 0 0 3px 3px;
+  transition: background 0.4s;
+}
+
+/* Tanque vacío */
+.card-act.tanque-vacio .tanque-tapa,
+.card-act.tanque-vacio .tanque-base { background: var(--red); }
+.card-act.tanque-vacio .tanque-cuerpo { border-color: var(--red); }
+.card-act.tanque-vacio .tanque-fill {
+  height: 0%;
+  background: rgba(248,81,73,0.2);
+}
+.card-act.tanque-vacio .tanque-ola { height: 0%; border-top-color: transparent; }
+.card-act.tanque-vacio .tanque-cuerpo {
+  animation: tanqueVacioShake 0.5s ease-in-out 0s 1;
+}
+@keyframes tanqueVacioShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-4px); }
+  40%       { transform: translateX(4px); }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(3px); }
+}
+
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .navbar { padding: 0 1rem; }
