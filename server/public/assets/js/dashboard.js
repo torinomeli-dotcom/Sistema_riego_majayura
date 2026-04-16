@@ -15,14 +15,14 @@ if (!TOKEN) {
 
 // ── Configuración de sensores ───────────────────────────────────
 const SENSORES_CONFIG = [
-  { id: 'SL1', zona: 'IZQ', planta: 'Planta 2'  },
-  { id: 'SL2', zona: 'IZQ', planta: 'Planta 12' },
-  { id: 'SL3', zona: 'IZQ', planta: 'Planta 22' },
-  { id: 'SM1', zona: 'CTR', planta: 'Planta 6'  },
-  { id: 'SM2', zona: 'CTR', planta: 'Planta 18' },
-  { id: 'SR1', zona: 'DER', planta: 'Planta 4'  },
-  { id: 'SR2', zona: 'DER', planta: 'Planta 12' },
-  { id: 'SR3', zona: 'DER', planta: 'Planta 20' },
+  { id: 'SL1', zona: 'IZQ', planta: 'Sensor 1'  },
+  { id: 'SL2', zona: 'IZQ', planta: 'Sensor 2' },
+  { id: 'SL3', zona: 'IZQ', planta: 'Sensor 3' },
+  { id: 'SM1', zona: 'CTR', planta: 'Sensor 1'  },
+  { id: 'SM2', zona: 'CTR', planta: 'Sensor 2' },
+  { id: 'SR1', zona: 'DER', planta: 'Sensor 1'  },
+  { id: 'SR2', zona: 'DER', planta: 'Sensor 2' },
+  { id: 'SR3', zona: 'DER', planta: 'Sensor 3' },
 ];
 
 // ── Estado local ────────────────────────────────────────────────
@@ -140,8 +140,10 @@ function actualizarUI(data) {
       data.motivo_riego || '—';
 
     // Toggle auto
-    const toggleAuto = document.getElementById('toggleAuto');
-    toggleAuto.checked = modo === 'AUTO';
+    const toggleAuto     = document.getElementById('toggleAuto');
+    const toggleAutoText = document.getElementById('toggleAutoText');
+    toggleAuto.checked       = modo === 'AUTO';
+    toggleAutoText.textContent = modo === 'AUTO' ? 'AUTOMÁTICO' : 'MANUAL';
 
     // Botones (deshabilitados en AUTO)
     const modoAuto = modo === 'AUTO';
@@ -466,7 +468,10 @@ async function enviarComando(payload) {
 // ── Botones del dashboard ───────────────────────────────────────
 window.cmdValvula  = (estado) => enviarComando({ cmd: 'valvula',   estado });
 window.cmdBombillo = (num, estado) => enviarComando({ cmd: `bombillo${num}`, estado });
-window.cmdModoAuto = (auto) => enviarComando({ cmd: 'modo_auto', estado: auto });
+window.cmdModoAuto = (auto) => {
+  document.getElementById('toggleAutoText').textContent = auto ? 'AUTOMÁTICO' : 'MANUAL';
+  enviarComando({ cmd: 'modo_auto', estado: auto });
+};
 
 window.cerrarSesion = () => {
   localStorage.removeItem('riego_token');
