@@ -150,10 +150,14 @@ function actualizarUI(data) {
     toggleAuto.checked       = modo === 'AUTO';
     toggleAutoText.textContent = modo === 'AUTO' ? 'AUTOMÁTICO' : 'MANUAL';
 
-    // Botones (deshabilitados en AUTO)
+    // Botones (deshabilitados en AUTO — el sistema los controla solo)
     const modoAuto = modo === 'AUTO';
     document.getElementById('btnAbrir').disabled  = modoAuto;
     document.getElementById('btnCerrar').disabled = modoAuto;
+    document.getElementById('btnB1On').disabled   = modoAuto;
+    document.getElementById('btnB1Off').disabled  = modoAuto;
+    document.getElementById('btnB2On').disabled   = modoAuto;
+    document.getElementById('btnB2Off').disabled  = modoAuto;
 
     // Timer válvula
     if (on) {
