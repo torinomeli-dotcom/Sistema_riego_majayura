@@ -52,7 +52,7 @@ const CULTIVOS = {
     tip:'Muy adaptado al calor guajiro. Reducir riego en frío reduce picor. Ideal para todo el año.',
     umbral_seco:3300, umbral_humedo:1900, umbral_encharcado:600, min_riego_ms:900000,  max_riego_ms:2700000 },
 
-  pimenton:  { nombre:'Pimentón',        emoji:'🫑', agua:'Media-alta',aguaCls:'agua-alta',
+  pimenton:  { nombre:'Pimentón',        emoji:'🍃', agua:'Media-alta',aguaCls:'agua-alta',
     desc:'Raíz media (30–50 cm). Similar al ají pero necesita más agua para desarrollar frutos grandes.',
     tip:'Sensible a temperaturas extremas. Cubierta o sombra parcial mejora producción en verano.',
     umbral_seco:3000, umbral_humedo:1800, umbral_encharcado:550, min_riego_ms:900000,  max_riego_ms:2700000 },
@@ -67,7 +67,7 @@ const CULTIVOS = {
     tip:'Uno de los cultivos mejor adaptados a La Guajira. Excelente para goteo por gravedad.',
     umbral_seco:3200, umbral_humedo:2000, umbral_encharcado:600, min_riego_ms:900000,  max_riego_ms:2700000 },
 
-  frijol:    { nombre:'Frijol',          emoji:'🫘', agua:'Media',    aguaCls:'agua-media',
+  frijol:    { nombre:'Frijol',          emoji:'🥜', agua:'Media',    aguaCls:'agua-media',
     desc:'Raíz media (30–60 cm). Muy sensible al encharcamiento — raíces se pudren en 24 h con agua estancada.',
     tip:'Nunca regar en exceso. En La Guajira la arena drena bien — encharcamiento es poco probable.',
     umbral_seco:3100, umbral_humedo:1800, umbral_encharcado:480, min_riego_ms:720000,  max_riego_ms:2400000 },
