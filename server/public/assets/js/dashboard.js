@@ -586,6 +586,60 @@ window.toggleTema = () => {
   aplicarTema(actual === 'dark' ? 'light' : 'dark');
 };
 
+// ── Modal OTA ───────────────────────────────────────────────────
+window.abrirModalOTA = () => {
+  document.getElementById('otaUrl').value = '';
+  document.getElementById('msgOTA').textContent = '';
+  document.getElementById('btnEnviarOTA').disabled = false;
+  document.getElementById('btnEnviarOTA').textContent = 'Actualizar ESP32';
+  document.getElementById('modalOTA').classList.add('open');
+};
+
+window.cerrarModalOTA = () => {
+  document.getElementById('modalOTA').classList.remove('open');
+};
+
+window.enviarOTA = async () => {
+  const url = document.getElementById('otaUrl').value.trim();
+  const msg = document.getElementById('msgOTA');
+  const btn = document.getElementById('btnEnviarOTA');
+
+  if (!url.startsWith('https://')) {
+    msg.className = 'modal-msg err';
+    msg.textContent = 'La URL debe comenzar con https://';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando al ESP32...';
+  msg.className = 'modal-msg';
+  msg.textContent = 'El ESP32 descargará y se actualizará solo. Tardará 1–3 minutos y se reiniciará.';
+
+  try {
+    const res = await fetch('/api/comando', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify({ cmd: 'ota_update', url })
+    });
+    if (res.ok) {
+      msg.className = 'modal-msg ok';
+      msg.textContent = '✅ Comando enviado. El ESP32 se actualizará y reconectará en ~2 min.';
+      btn.textContent = 'Enviado';
+    } else {
+      const e = await res.json();
+      msg.className = 'modal-msg err';
+      msg.textContent = e.error || 'Error enviando comando.';
+      btn.disabled = false;
+      btn.textContent = 'Actualizar ESP32';
+    }
+  } catch {
+    msg.className = 'modal-msg err';
+    msg.textContent = 'Error de conexión con el servidor.';
+    btn.disabled = false;
+    btn.textContent = 'Actualizar ESP32';
+  }
+};
+
 // ── Modal cambiar clave ─────────────────────────────────────────
 window.abrirModalClave = () => {
   document.getElementById('claveActual').value  = '';

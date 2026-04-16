@@ -52,7 +52,7 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
             umbral_seco, umbral_humedo, umbral_encharcado,
             min_riego_ms, max_riego_ms, cultivo } = req.body;
 
-    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar'];
+    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar', 'ota_update'];
     if (!cmd || !comandosValidos.includes(cmd)) {
       return res.status(400).json({ error: `Comando inválido. Válidos: ${comandosValidos.join(', ')}` });
     }
@@ -65,6 +65,12 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
       if (min_riego_ms      !== undefined) payload.min_riego_ms      = Number(min_riego_ms);
       if (max_riego_ms      !== undefined) payload.max_riego_ms      = Number(max_riego_ms);
       if (cultivo           !== undefined) payload.cultivo           = String(cultivo).slice(0, 31);
+    } else if (cmd === 'ota_update') {
+      const url = String(req.body.url || '').trim();
+      if (!url.startsWith('https://')) {
+        return res.status(400).json({ error: 'La URL debe ser HTTPS.' });
+      }
+      payload.url = url;
     } else {
       if (estado !== undefined) payload.estado = !!estado;
       if (auto   !== undefined) payload.estado  = !!auto;

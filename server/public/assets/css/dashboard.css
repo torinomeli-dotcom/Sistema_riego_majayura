@@ -905,8 +905,20 @@ body {
   border-radius: var(--radius-sm);
   display: none;
 }
-.modal-msg.ok  { background: var(--green-dim); color: var(--green); display: block; }
-.modal-msg.err { background: var(--red-dim);   color: var(--red);   display: block; }
+.modal-msg.ok  { background: var(--green-dim);  color: var(--green);  display: block; }
+.modal-msg.err { background: var(--red-dim);    color: var(--red);    display: block; }
+.modal-msg.info{ background: var(--blue-dim);   color: var(--blue);   display: block; }
+
+.modal-ota-steps {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--blue);
+}
 
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
