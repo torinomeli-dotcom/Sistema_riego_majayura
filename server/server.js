@@ -128,6 +128,7 @@ function manejarESP32(ws) {
   esp32WS = ws;
   esp32UltimoContacto = Date.now();
   console.log('[ESP32] WebSocket conectado');
+  broadcastDashboard({ tipo: 'esp32_status', conectado: true });
 
   // Vaciar cola de comandos pendientes
   if (comandosPendientes.length > 0) {
@@ -159,7 +160,10 @@ function manejarESP32(ws) {
   });
 
   ws.on('close', () => {
-    if (esp32WS === ws) esp32WS = null;
+    if (esp32WS === ws) {
+      esp32WS = null;
+      broadcastDashboard({ tipo: 'esp32_status', conectado: false });
+    }
     console.log('[ESP32] WebSocket desconectado');
   });
 

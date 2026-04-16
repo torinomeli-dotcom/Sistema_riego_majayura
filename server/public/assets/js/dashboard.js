@@ -30,6 +30,7 @@ let estadoActual    = null;
 let timerValvula    = null;
 let segundosValvula = 0;
 let chartInstance   = null;
+let esp32Online     = false;   // estado real del ESP32 vía WebSocket
 
 // ── Inicializar tarjetas de sensores ────────────────────────────
 function inicializarSensores() {
@@ -372,7 +373,14 @@ function conectarWS() {
   wsObj.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data);
-      if (data.sensores || data.tipo === 'telemetria') actualizarUI(data);
+      if (data.tipo === 'esp32_status') {
+        esp32Online = data.conectado;
+        actualizarIndicadorESP32();
+      } else if (data.sensores || data.tipo === 'telemetria') {
+        esp32Online = true;
+        actualizarIndicadorESP32();
+        actualizarUI(data);
+      }
     } catch (err) {
       console.warn('[WS] Error parseando:', err.message);
     }
@@ -390,19 +398,28 @@ function conectarWS() {
   };
 }
 
+// Estado del WebSocket browser ↔ servidor
 function setConexionStatus(online) {
-  const dot    = document.getElementById('wsDot');
-  const label  = document.getElementById('wsLabel');
   const banner = document.getElementById('bannerReconectando');
-
   if (online) {
-    dot.className     = 'ws-dot online';
-    label.textContent = 'Online';
     banner.classList.remove('visible');
   } else {
-    dot.className     = 'ws-dot';
-    label.textContent = 'Reconectando';
+    esp32Online = false;
+    actualizarIndicadorESP32();
     if (!estadoActual) banner.classList.add('visible');
+  }
+}
+
+// Estado del ESP32 ↔ servidor (verde/gris)
+function actualizarIndicadorESP32() {
+  const dot   = document.getElementById('wsDot');
+  const label = document.getElementById('wsLabel');
+  if (esp32Online) {
+    dot.className     = 'ws-dot online';
+    label.textContent = 'ESP32 Online';
+  } else {
+    dot.className     = 'ws-dot';
+    label.textContent = 'ESP32 Offline';
   }
 }
 
