@@ -106,6 +106,8 @@ let timerValvula    = null;
 let segundosValvula = 0;
 let chartInstance   = null;
 let esp32Online     = false;   // estado real del ESP32 vía WebSocket
+let otaEnProgreso   = false;   // true mientras ESP32 está actualizando firmware
+let otaTimeout      = null;    // timer de watchdog OTA
 
 // ── Inicializar tarjetas de sensores ────────────────────────────
 function inicializarSensores() {
@@ -463,6 +465,20 @@ function conectarWS() {
       if (data.tipo === 'esp32_status') {
         esp32Online = data.conectado;
         actualizarIndicadorESP32();
+
+        if (otaEnProgreso) {
+          if (!data.conectado) {
+            // ESP32 se desconectó — está instalando el firmware
+            otaMensaje('info', '⚙ Instalando firmware... el ESP32 se reiniciará solo.');
+          } else {
+            // ESP32 reconectó — OTA exitoso
+            otaEnProgreso = false;
+            clearTimeout(otaTimeout);
+            otaMensaje('ok', '✅ ¡Firmware actualizado con éxito! ESP32 reconectado.');
+            document.getElementById('btnEnviarOTA').textContent = '✓ Actualización completa';
+            mostrarToast('✅ OTA completado — ESP32 reconectado', 'success');
+          }
+        }
       } else if (data.sensores || data.tipo === 'telemetria') {
         esp32Online = true;
         actualizarIndicadorESP32();
@@ -586,6 +602,13 @@ window.toggleTema = () => {
   aplicarTema(actual === 'dark' ? 'light' : 'dark');
 };
 
+function otaMensaje(tipo, texto) {
+  const msg = document.getElementById('msgOTA');
+  if (!msg) return;
+  msg.className = `modal-msg ${tipo}`;
+  msg.textContent = texto;
+}
+
 // ── Modal OTA ───────────────────────────────────────────────────
 window.abrirModalOTA = () => {
   document.getElementById('otaUrl').value = '';
@@ -622,9 +645,18 @@ window.enviarOTA = async () => {
       body: JSON.stringify({ cmd: 'ota_update', url })
     });
     if (res.ok) {
-      msg.className = 'modal-msg ok';
-      msg.textContent = '✅ Comando enviado. El ESP32 se actualizará y reconectará en ~2 min.';
-      btn.textContent = 'Enviado';
+      otaEnProgreso = true;
+      otaMensaje('info', '📡 Descargando firmware... espera que el ESP32 se desconecte.');
+      btn.textContent = 'Actualizando...';
+      // Watchdog: si en 5 min no reconecta, mostrar advertencia
+      otaTimeout = setTimeout(() => {
+        if (otaEnProgreso) {
+          otaEnProgreso = false;
+          otaMensaje('err', '⚠ Sin respuesta en 5 min. Verifica el ESP32 — puede haber fallado.');
+          document.getElementById('btnEnviarOTA').disabled = false;
+          document.getElementById('btnEnviarOTA').textContent = 'Reintentar';
+        }
+      }, 300000);
     } else {
       const e = await res.json();
       msg.className = 'modal-msg err';
