@@ -15,14 +15,14 @@ if (!TOKEN) {
 
 // ── Configuración de sensores ───────────────────────────────────
 const SENSORES_CONFIG = [
-  { id: 'SL1', zona: 'IZQ', planta: 'M2',  dist: 2.0 },
-  { id: 'SL2', zona: 'IZQ', planta: 'M12', dist: 2.0 },
-  { id: 'SL3', zona: 'IZQ', planta: 'M22', dist: 2.0 },
-  { id: 'SM1', zona: 'CTR', planta: 'M6',  dist: 7.5 },
-  { id: 'SM2', zona: 'CTR', planta: 'M18', dist: 7.5 },
-  { id: 'SR1', zona: 'DER', planta: 'M4',  dist: 13.0 },
-  { id: 'SR2', zona: 'DER', planta: 'M12', dist: 13.0 },
-  { id: 'SR3', zona: 'DER', planta: 'M20', dist: 13.0 },
+  { id: 'SL1', zona: 'IZQ', planta: 'Planta 2'  },
+  { id: 'SL2', zona: 'IZQ', planta: 'Planta 12' },
+  { id: 'SL3', zona: 'IZQ', planta: 'Planta 22' },
+  { id: 'SM1', zona: 'CTR', planta: 'Planta 6'  },
+  { id: 'SM2', zona: 'CTR', planta: 'Planta 18' },
+  { id: 'SR1', zona: 'DER', planta: 'Planta 4'  },
+  { id: 'SR2', zona: 'DER', planta: 'Planta 12' },
+  { id: 'SR3', zona: 'DER', planta: 'Planta 20' },
 ];
 
 // ── Estado local ────────────────────────────────────────────────
@@ -46,17 +46,15 @@ function inicializarSensores() {
       <div class="sensor-card" id="card_${cfg.id}">
         <div class="sensor-top">
           <div>
-            <div class="sensor-nombre">${cfg.id}</div>
-            <div class="sensor-pos">${cfg.planta} · ${cfg.dist}m · ${cfg.zona}</div>
+            <div class="sensor-nombre">${cfg.planta}</div>
           </div>
-          <span class="badge-estado badge-HUMEDO" id="badge_${cfg.id}">HUMEDO</span>
+          <span class="badge-estado badge-HUMEDO" id="badge_${cfg.id}">HÚMEDO</span>
         </div>
         <div class="sensor-barra-wrap">
           <div class="sensor-barra-fill fill-humedo" id="barra_${cfg.id}" style="width:50%"></div>
         </div>
         <div class="sensor-valores">
           <span class="sensor-pct pct-humedo" id="pct_${cfg.id}">50%</span>
-          <span class="sensor-adc" id="adc_${cfg.id}">ADC: ---</span>
         </div>
         <div class="sensor-tiempo" id="tiempo_${cfg.id}">--</div>
       </div>`;
@@ -84,7 +82,6 @@ function actualizarUI(data) {
     const badge  = document.getElementById(`badge_${cfg.id}`);
     const barra  = document.getElementById(`barra_${cfg.id}`);
     const pct    = document.getElementById(`pct_${cfg.id}`);
-    const adcEl  = document.getElementById(`adc_${cfg.id}`);
     const tiempo = document.getElementById(`tiempo_${cfg.id}`);
 
     const estado = info.estado || 'HUMEDO';
@@ -98,7 +95,8 @@ function actualizarUI(data) {
 
     // Badge
     badge.className = `badge-estado badge-${estado}`;
-    badge.textContent = estado === 'ENCHARCADO' ? '⚠ ENCHARCADO' : estado;
+    const labels = { HUMEDO: 'HÚMEDO', SECO: 'SECO', ENCHARCADO: '⚠ ENCHARCADO' };
+    badge.textContent = labels[estado] || estado;
 
     // Barra de humedad
     barra.style.width = humPct + '%';
@@ -113,8 +111,6 @@ function actualizarUI(data) {
       setTimeout(() => pct.classList.remove('changed'), 400);
     }
 
-    // ADC crudo
-    adcEl.textContent = `ADC: ${adc}`;
 
     // Tiempo desde última lectura
     tiempo.textContent = 'Hace ' + tiempoRelativo(data.serverTimestamp || Date.now());
