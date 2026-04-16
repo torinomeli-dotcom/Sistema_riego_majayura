@@ -48,16 +48,27 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
 
   // ── POST /api/comando — enviar comando al ESP32 ─────────────────
   router.post('/comando', requireAuth, cmdLimit, (req, res) => {
-    const { cmd, estado, auto } = req.body;
+    const { cmd, estado, auto,
+            umbral_seco, umbral_humedo, umbral_encharcado,
+            min_riego_ms, max_riego_ms, cultivo } = req.body;
 
-    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping'];
+    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar'];
     if (!cmd || !comandosValidos.includes(cmd)) {
       return res.status(400).json({ error: `Comando inválido. Válidos: ${comandosValidos.join(', ')}` });
     }
 
     const payload = { cmd };
-    if (estado !== undefined) payload.estado = !!estado;
-    if (auto   !== undefined) payload.estado  = !!auto;
+    if (cmd === 'calibrar') {
+      if (umbral_seco       !== undefined) payload.umbral_seco       = Number(umbral_seco);
+      if (umbral_humedo     !== undefined) payload.umbral_humedo     = Number(umbral_humedo);
+      if (umbral_encharcado !== undefined) payload.umbral_encharcado = Number(umbral_encharcado);
+      if (min_riego_ms      !== undefined) payload.min_riego_ms      = Number(min_riego_ms);
+      if (max_riego_ms      !== undefined) payload.max_riego_ms      = Number(max_riego_ms);
+      if (cultivo           !== undefined) payload.cultivo           = String(cultivo).slice(0, 31);
+    } else {
+      if (estado !== undefined) payload.estado = !!estado;
+      if (auto   !== undefined) payload.estado  = !!auto;
+    }
 
     const enviado = enviarComandoESP32(payload);
 

@@ -25,6 +25,81 @@ const SENSORES_CONFIG = [
   { id: 'SR3', zona: 'DER', planta: 'Sensor 3' },
 ];
 
+// ── Catálogo de cultivos — La Guajira, riego goteo gravedad ────
+const CULTIVOS = {
+  cilantro:  { nombre:'Cilantro',        emoji:'🌿', agua:'Muy alta', aguaCls:'agua-muy-alta',
+    desc:'Raíz muy superficial (10–20 cm). Muy sensible a la falta de agua — se seca rápido en calor guajiro.',
+    tip:'En verano puede necesitar 6–8 ciclos de riego diarios. Ideal en horas frescas de madrugada y tarde.',
+    umbral_seco:2800, umbral_humedo:1400, umbral_encharcado:500, min_riego_ms:480000,  max_riego_ms:1500000 },
+
+  lechuga:   { nombre:'Lechuga',         emoji:'🥬', agua:'Muy alta', aguaCls:'agua-muy-alta',
+    desc:'Raíz superficial (10–20 cm). La más sensible al calor. Produce mejor con sombra y riego constante.',
+    tip:'En Maicao es casi obligatorio usar malla sombra 50%. Sin ella el calor de 40°C la quema en horas.',
+    umbral_seco:2600, umbral_humedo:1300, umbral_encharcado:500, min_riego_ms:480000,  max_riego_ms:1500000 },
+
+  cebolla:   { nombre:'Cebolla',         emoji:'🧅', agua:'Alta',     aguaCls:'agua-alta',
+    desc:'Raíz superficial (15–30 cm). Necesita humedad consistente para que el bulbo se forme bien.',
+    tip:'Riego irregular produce bulbos deformes y partidos. Reducir agua 2 semanas antes de cosechar.',
+    umbral_seco:2900, umbral_humedo:1600, umbral_encharcado:500, min_riego_ms:600000,  max_riego_ms:2100000 },
+
+  tomate:    { nombre:'Tomate',          emoji:'🍅', agua:'Alta',     aguaCls:'agua-alta',
+    desc:'Raíz media (30–60 cm). Riego irregular causa pudrición apical del fruto — pérdida total del tomate.',
+    tip:'Mantener humedad constante durante floración y cuaje del fruto. Crítico para calidad.',
+    umbral_seco:3000, umbral_humedo:1700, umbral_encharcado:550, min_riego_ms:900000,  max_riego_ms:2400000 },
+
+  aji:       { nombre:'Ají',             emoji:'🌶️', agua:'Media-alta',aguaCls:'agua-alta',
+    desc:'Raíz media (30–50 cm). Cultivo tradicional de La Guajira. Tolera algo de estrés hídrico.',
+    tip:'Muy adaptado al calor guajiro. Reducir riego en frío reduce picor. Ideal para todo el año.',
+    umbral_seco:3300, umbral_humedo:1900, umbral_encharcado:600, min_riego_ms:900000,  max_riego_ms:2700000 },
+
+  pimenton:  { nombre:'Pimentón',        emoji:'🫑', agua:'Media-alta',aguaCls:'agua-alta',
+    desc:'Raíz media (30–50 cm). Similar al ají pero necesita más agua para desarrollar frutos grandes.',
+    tip:'Sensible a temperaturas extremas. Cubierta o sombra parcial mejora producción en verano.',
+    umbral_seco:3000, umbral_humedo:1800, umbral_encharcado:550, min_riego_ms:900000,  max_riego_ms:2700000 },
+
+  pepino:    { nombre:'Pepino',          emoji:'🥒', agua:'Alta',     aguaCls:'agua-alta',
+    desc:'Raíz superficial-media (25–40 cm). El fruto es 95% agua — sin riego constante se amarga.',
+    tip:'Sequía produce frutos deformes y amargos. En La Guajira con goteo produce excelente calidad.',
+    umbral_seco:2900, umbral_humedo:1600, umbral_encharcado:500, min_riego_ms:720000,  max_riego_ms:2100000 },
+
+  berenjena: { nombre:'Berenjena',       emoji:'🍆', agua:'Media',    aguaCls:'agua-media',
+    desc:'Raíz media-profunda (40–70 cm). Muy adaptada al calor. Tolera algo de sequía sin perder calidad.',
+    tip:'Uno de los cultivos mejor adaptados a La Guajira. Excelente para goteo por gravedad.',
+    umbral_seco:3200, umbral_humedo:2000, umbral_encharcado:600, min_riego_ms:900000,  max_riego_ms:2700000 },
+
+  frijol:    { nombre:'Frijol',          emoji:'🫘', agua:'Media',    aguaCls:'agua-media',
+    desc:'Raíz media (30–60 cm). Muy sensible al encharcamiento — raíces se pudren en 24 h con agua estancada.',
+    tip:'Nunca regar en exceso. En La Guajira la arena drena bien — encharcamiento es poco probable.',
+    umbral_seco:3100, umbral_humedo:1800, umbral_encharcado:480, min_riego_ms:720000,  max_riego_ms:2400000 },
+
+  maiz:      { nombre:'Maíz',            emoji:'🌽', agua:'Media',    aguaCls:'agua-media',
+    desc:'Raíz media-profunda (50–80 cm). Crítico mantener humedad en germinación y en espigamiento.',
+    tip:'Con goteo en La Guajira se puede sembrar todo el año. Reducir agua al madurar el grano.',
+    umbral_seco:3100, umbral_humedo:1900, umbral_encharcado:600, min_riego_ms:900000,  max_riego_ms:2700000 },
+
+  auyama:    { nombre:'Auyama',          emoji:'🎃', agua:'Media',    aguaCls:'agua-media',
+    desc:'Raíz profunda (60–100 cm). Muy común en La Guajira. Tolera períodos secos sin perder producción.',
+    tip:'Reducir agua al madurar el fruto concentra el sabor. No regar el follaje — favorece hongos.',
+    umbral_seco:3400, umbral_humedo:2000, umbral_encharcado:600, min_riego_ms:1200000, max_riego_ms:3000000 },
+
+  patilla:   { nombre:'Patilla',         emoji:'🍉', agua:'Media-baja',aguaCls:'agua-media',
+    desc:'Raíz muy profunda (60–120 cm). Cultivo emblema de La Guajira — produce naturalmente en sequía.',
+    tip:'Reducir riego 10–15 días antes de cosechar aumenta el dulzor. Calidad excepcional con goteo.',
+    umbral_seco:3400, umbral_humedo:2100, umbral_encharcado:600, min_riego_ms:1200000, max_riego_ms:3000000 },
+
+  melon:     { nombre:'Melón',           emoji:'🍈', agua:'Media-baja',aguaCls:'agua-media',
+    desc:'Raíz profunda (60–100 cm). Excelente adaptación al clima árido. Muy rentable en La Guajira.',
+    tip:'Limitar a 2–3 frutos por planta para mayor tamaño. Reducir agua en maduración para más azúcar.',
+    umbral_seco:3400, umbral_humedo:2100, umbral_encharcado:600, min_riego_ms:1200000, max_riego_ms:3000000 },
+
+  yuca:      { nombre:'Yuca',            emoji:'🌾', agua:'Baja',     aguaCls:'agua-baja',
+    desc:'Raíz muy profunda (60–120 cm). EL cultivo de La Guajira. Sobrevive meses sin lluvia.',
+    tip:'Con riego por goteo la producción se duplica. Solo regar cuando el suelo esté muy seco. Muy rentable.',
+    umbral_seco:3700, umbral_humedo:2300, umbral_encharcado:600, min_riego_ms:1200000, max_riego_ms:3600000 },
+};
+
+let cultivoSeleccionado = null;
+
 // ── Estado local ────────────────────────────────────────────────
 let estadoActual    = null;
 let timerValvula    = null;
@@ -199,6 +274,11 @@ function actualizarUI(data) {
 
   if (alerta && !prev?.alerta_encharcamiento) {
     mostrarToast('⚠ Encharcamiento detectado en columna IZQ', 'red');
+  }
+
+  // ── Cultivo activo desde ESP32 ────────────────────────────
+  if (data.calibracion?.cultivo) {
+    marcarCultivoActivo(data.calibracion.cultivo);
   }
 
   // ── Actualizar historial del servidor ──────────────────────
@@ -593,9 +673,107 @@ function tiempoRelativo(ts) {
   return Math.floor(diff / 60) + ' min';
 }
 
+// ── SELECTOR DE CULTIVO ─────────────────────────────────────────
+function inicializarCultivos() {
+  const grid = document.getElementById('cultivoGrid');
+  Object.entries(CULTIVOS).forEach(([key, c]) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-cultivo';
+    btn.id = `cultivo_${key}`;
+    btn.innerHTML = `<span class="ce">${c.emoji}</span>${c.nombre}`;
+    btn.onclick = () => seleccionarCultivo(key);
+    grid.appendChild(btn);
+  });
+}
+
+function seleccionarCultivo(key) {
+  cultivoSeleccionado = key;
+  const c = CULTIVOS[key];
+
+  // Marcar botón activo
+  document.querySelectorAll('.btn-cultivo').forEach(b => b.classList.remove('activo'));
+  document.getElementById(`cultivo_${key}`).classList.add('activo');
+
+  // Llenar panel de info
+  document.getElementById('cultivoEmoji').textContent  = c.emoji;
+  document.getElementById('cultivoNombre').textContent = c.nombre;
+  document.getElementById('cultivoDesc').textContent   = c.desc;
+  document.getElementById('cultivoTip').textContent    = c.tip;
+
+  const badge = document.getElementById('cultivoBadgeAgua');
+  badge.textContent = `💧 ${c.agua}`;
+  badge.className   = `badge-agua ${c.aguaCls}`;
+
+  document.getElementById('cultivoParams').innerHTML = `
+    <div class="param-item">
+      <div class="param-label">Abre válvula si ADC &gt;</div>
+      <div class="param-value">${c.umbral_seco}<span class="param-unit">ADC</span></div>
+    </div>
+    <div class="param-item">
+      <div class="param-label">Cierra válvula si ADC &lt;</div>
+      <div class="param-value">${c.umbral_humedo}<span class="param-unit">ADC</span></div>
+    </div>
+    <div class="param-item">
+      <div class="param-label">Riego mínimo</div>
+      <div class="param-value">${c.min_riego_ms/60000}<span class="param-unit">min</span></div>
+    </div>
+    <div class="param-item">
+      <div class="param-label">Corte seguridad</div>
+      <div class="param-value">${c.max_riego_ms/60000}<span class="param-unit">min</span></div>
+    </div>`;
+
+  document.getElementById('cultivoInfo').style.display = 'block';
+  document.getElementById('cultivoLabel').textContent  = `Seleccionado: ${c.nombre}`;
+}
+
+window.aplicarCultivo = async () => {
+  if (!cultivoSeleccionado) return;
+  const c   = CULTIVOS[cultivoSeleccionado];
+  const btn = document.getElementById('btnAplicarCultivo');
+  btn.disabled = true;
+  btn.textContent = 'Enviando al ESP32...';
+  try {
+    const res = await fetch('/api/comando', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify({
+        cmd:                'calibrar',
+        cultivo:            cultivoSeleccionado,
+        umbral_seco:        c.umbral_seco,
+        umbral_humedo:      c.umbral_humedo,
+        umbral_encharcado:  c.umbral_encharcado,
+        min_riego_ms:       c.min_riego_ms,
+        max_riego_ms:       c.max_riego_ms,
+      })
+    });
+    if (res.ok) {
+      mostrarToast(`✅ Cultivo "${c.nombre}" aplicado al sistema`, 'success');
+      btn.textContent = `✓ ${c.nombre} activo`;
+    } else {
+      const e = await res.json();
+      mostrarToast(`Error: ${e.error}`, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Aplicar parámetros al sistema';
+    }
+  } catch {
+    mostrarToast('Error de conexión', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Aplicar parámetros al sistema';
+  }
+};
+
+function marcarCultivoActivo(clave) {
+  if (!clave || !CULTIVOS[clave]) return;
+  document.querySelectorAll('.btn-cultivo').forEach(b => b.classList.remove('activo'));
+  const btn = document.getElementById(`cultivo_${clave}`);
+  if (btn) btn.classList.add('activo');
+  document.getElementById('cultivoLabel').textContent = `Activo: ${CULTIVOS[clave].nombre}`;
+}
+
 // ── INICIO ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   inicializarSensores();
+  inicializarCultivos();
 
   // Cargar estado inicial por HTTP inmediatamente (por si WS tarda)
   cargarEstadoHTTP();

@@ -588,6 +588,161 @@ body {
   margin-right: 3px;
 }
 
+/* ── SELECTOR DE CULTIVO ─────────────────────────────────────── */
+.card-cultivo {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.cultivo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-cultivo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 6px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-main);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+.btn-cultivo:hover {
+  border-color: var(--green);
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px var(--green-glow);
+}
+.btn-cultivo.activo {
+  border-color: var(--green);
+  background: var(--green-dim);
+  color: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+}
+.btn-cultivo .ce { font-size: 1.75rem; line-height: 1; }
+
+.cultivo-info {
+  margin-top: 16px;
+  padding: 18px;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.cultivo-info-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.cultivo-emoji-big { font-size: 2.8rem; line-height: 1; }
+.cultivo-nombre {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.badge-agua {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.agua-muy-alta { background: var(--blue-dim);   color: var(--blue); }
+.agua-alta     { background: var(--green-dim);  color: var(--green); }
+.agua-media    { background: var(--yellow-dim); color: var(--yellow); }
+.agua-baja     { background: var(--orange-dim); color: var(--orange); }
+
+.cultivo-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.cultivo-tip {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 12px 0 14px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--green);
+  background: var(--green-dim);
+  border-radius: 0 8px 8px 0;
+  line-height: 1.5;
+}
+
+.cultivo-params {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+@media (min-width: 576px) {
+  .cultivo-params { grid-template-columns: repeat(4, 1fr); }
+}
+.param-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.param-label {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+.param-value {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.param-unit {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.btn-aplicar-cultivo {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10d48e, #0aaa70);
+  color: #032218;
+  font-family: var(--font-main);
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+.btn-aplicar-cultivo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--green-glow);
+}
+.btn-aplicar-cultivo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ── TOASTS ──────────────────────────────────────────────────── */
 .toast-container {
   position: fixed;
