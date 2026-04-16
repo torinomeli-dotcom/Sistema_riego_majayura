@@ -139,6 +139,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Tanque de suministro -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card-act" id="cardTanque">
+        <div class="act-header">
+          <span class="act-icon" id="tanqueIcon">🪣</span>
+          <div>
+            <div class="act-title">TANQUE DE AGUA</div>
+            <div class="act-sub">GPIO 38 · Flotador magnético</div>
+          </div>
+        </div>
+        <div class="act-estado" id="estadoTanque">--</div>
+        <div class="act-motivo" id="tanqueInfo">Esperando datos del ESP32...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALERTA TANQUE VACÍO ──────────────────────────────────── -->
+  <div class="alerta-enchar alerta-tanque" id="alertaTanque" style="display:none">
+    ⚠ TANQUE SIN AGUA — Válvula bloqueada automáticamente. Llenar el tanque de suministro.
   </div>
 
   <!-- ── ALERTA ENCHARCAMIENTO ────────────────────────────────── -->
