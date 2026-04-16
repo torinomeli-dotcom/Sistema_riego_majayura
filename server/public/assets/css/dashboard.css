@@ -213,6 +213,11 @@ body {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.55; }
 }
+.alerta-enchar.alerta-tanque {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
 
 /* ── CARDS DE ACTUADORES ─────────────────────────────────────── */
 .card-act {
@@ -245,6 +250,19 @@ body {
 .card-act.bombillo-on {
   border-color: var(--yellow);
   box-shadow: 0 0 28px var(--yellow-dim), inset 0 0 28px rgba(255,201,60,0.04);
+}
+.card-act.tanque-vacio {
+  border-color: var(--red);
+  box-shadow: 0 0 28px var(--red-dim);
+  animation: pulse-tanque 1.5s ease-in-out infinite;
+}
+@keyframes pulse-tanque {
+  0%, 100% { box-shadow: 0 0 20px rgba(248,81,73,0.15); }
+  50%       { box-shadow: 0 0 36px rgba(248,81,73,0.4); }
+}
+.act-estado.tanque-alerta {
+  color: var(--red);
+  font-weight: 700;
 }
 
 .act-header {

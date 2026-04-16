@@ -269,6 +269,31 @@ function actualizarUI(data) {
   actualizarBombillo('cardB2', 'estadoB2', 'b2Icon', b2on,
     prev?.actuadores?.bombillo2?.estado, '2');
 
+  // ── TANQUE DE AGUA ─────────────────────────────────────────
+  const tanqueLleno = data.tanque_lleno !== undefined ? data.tanque_lleno : true;
+  const cardTanque     = document.getElementById('cardTanque');
+  const estadoTanqueEl = document.getElementById('estadoTanque');
+  const tanqueInfo     = document.getElementById('tanqueInfo');
+  const tanqueIcon     = document.getElementById('tanqueIcon');
+
+  cardTanque.classList.toggle('tanque-vacio', !tanqueLleno);
+  estadoTanqueEl.textContent = tanqueLleno ? 'CON AGUA' : 'VACÍO';
+  estadoTanqueEl.className   = `act-estado${tanqueLleno ? ' on' : ' tanque-alerta'}`;
+  tanqueIcon.textContent     = tanqueLleno ? '🪣' : '⚠️';
+  tanqueInfo.textContent     = tanqueLleno
+    ? 'Suministro de agua disponible'
+    : 'Sin agua — válvula bloqueada';
+
+  const alertaTanqueEl = document.getElementById('alertaTanque');
+  alertaTanqueEl.style.display = !tanqueLleno ? 'block' : 'none';
+
+  if (!tanqueLleno && (prev?.tanque_lleno !== false)) {
+    mostrarToast('⚠ Tanque sin agua — válvula bloqueada automáticamente', 'red');
+  }
+  if (tanqueLleno && prev?.tanque_lleno === false) {
+    mostrarToast('Tanque con agua — sistema de riego disponible', 'blue');
+  }
+
   // ── ALERTA ENCHARCAMIENTO ──────────────────────────────────
   const alerta = data.alerta_encharcamiento || false;
   const alertaEl = document.getElementById('alertaEnchar');
