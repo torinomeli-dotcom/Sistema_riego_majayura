@@ -672,7 +672,7 @@ void dibujarEstado() {
     if (strcmp(sensores[i].estado, "ENCHARCADO") == 0) encharcados++;
     if (strcmp(sensores[i].estado, "HUMEDO")     == 0) humedosIzq++;
   }
-  if (!tanqueLleno && pantallaEstado == 2)          { lcdMsg("ALERTA:SIN AGUA!", "Llenar tanque!  "); return; }
+  if (!tanqueLleno)                                 { lcdMsg("ALERTA:SIN AGUA!", "Llenar tanque!  "); return; }
   if (alertaEncharcamiento && pantallaEstado == 2)  { lcdMsg("ALERTA:ENCHAR!  ", "Revisar col IZQ "); return; }
   lcd.clear();
   switch (pantallaEstado) {
