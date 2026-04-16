@@ -443,7 +443,7 @@ void leerTodosSensores() {
     sensores[i].pct    = adcAPorcentaje(sensores[i].adcVal);
     strncpy(sensores[i].estado, estadoSensor(sensores[i].adcVal), 15);
   }
-  tanqueLleno = (digitalRead(PIN_TANQUE) == LOW);
+  tanqueLleno = (digitalRead(PIN_TANQUE) == HIGH);
 }
 
 int leerSensor(int pin) {
