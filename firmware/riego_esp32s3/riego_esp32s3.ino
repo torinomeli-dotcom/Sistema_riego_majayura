@@ -131,6 +131,8 @@ bool modoAuto             = true;
 bool alertaEncharcamiento = false;
 bool tanqueLleno          = true;
 bool otaFallo             = false;
+int  contadorTanque       = 0;
+#define DEBOUNCE_TANQUE   5
 bool ntpOk                = false;
 bool wifiConectado        = false;
 bool wsConectado          = false;
@@ -310,6 +312,22 @@ void loop() {
     dibujarEstado();
   }
 
+  // Sensor tanque — lectura en cada loop con antirrebote (5 lecturas consecutivas)
+  bool pinTanque = (digitalRead(PIN_TANQUE) == HIGH);
+  if (pinTanque != tanqueLleno) {
+    contadorTanque++;
+    if (contadorTanque >= DEBOUNCE_TANQUE) {
+      contadorTanque = 0;
+      tanqueLleno = pinTanque;
+      Serial.printf("[TANQUE] %s\n", tanqueLleno ? "CON AGUA" : "VACIO — bloqueando valvula");
+      if (!tanqueLleno && valvulaOn) setValvula(false, true, "Tanque vacio!");
+      if (!enMenu) dibujarEstado();
+      transmitirEstado();
+    }
+  } else {
+    contadorTanque = 0;
+  }
+
   char tecla = teclado.getKey();
   if (tecla) procesarTecla(tecla);
 
@@ -444,7 +462,7 @@ void leerTodosSensores() {
     sensores[i].pct    = adcAPorcentaje(sensores[i].adcVal);
     strncpy(sensores[i].estado, estadoSensor(sensores[i].adcVal), 15);
   }
-  tanqueLleno = (digitalRead(PIN_TANQUE) == HIGH);
+  // tanque se lee en loop() con antirrebote — no aquí
 }
 
 int leerSensor(int pin) {
