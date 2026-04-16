@@ -78,12 +78,13 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
 
     const enviado = enviarComandoESP32(payload);
 
-    if (!enviado) {
+    // OTA se encola aunque ESP32 no esté conectado en este momento exacto
+    if (!enviado && cmd !== 'ota_update') {
       return res.status(503).json({ error: 'ESP32 no conectado.' });
     }
 
-    console.log(`[API] Comando enviado por ${req.user.sub}: ${JSON.stringify(payload)}`);
-    res.json({ ok: true, cmd: payload });
+    console.log(`[API] Comando ${enviado ? 'enviado' : 'encolado'} por ${req.user.sub}: ${JSON.stringify(payload)}`);
+    res.json({ ok: true, cmd: payload, encolado: !enviado });
   });
 
   // ── GET /api/historial — últimas 100 lecturas ───────────────────

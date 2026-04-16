@@ -737,9 +737,13 @@ window.enviarOTA = async () => {
       body: JSON.stringify({ cmd: 'ota_update', url })
     });
     if (res.ok) {
+      const respuesta = await res.json();
       otaEnProgreso = true;
       otaFase('progreso');
       otaIniciarBarraSimulada();
+      if (respuesta.encolado) {
+        document.getElementById('otaEstadoTxt').textContent = '🔄 Esperando que el ESP32 conecte para enviar OTA...';
+      }
       // Watchdog 5 min
       otaTimeout = setTimeout(() => {
         if (otaEnProgreso) otaResultado(false);
