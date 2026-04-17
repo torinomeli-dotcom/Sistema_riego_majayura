@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p C:/Users/HENRRY/Desktop/SISTEMA_RIEGO/firmware/riego_esp32s3)",
+      "Bash(mkdir -p C:/Users/HENRRY/Desktop/SISTEMA_RIEGO/server/routes)",
+      "Bash(mkdir -p C:/Users/HENRRY/Desktop/SISTEMA_RIEGO/server/public/assets/css)",
+      "Bash(mkdir -p C:/Users/HENRRY/Desktop/SISTEMA_RIEGO/server/public/assets/js)",
+      "Bash(python3:*)",
+      "Bash(npm --version)",
+      "Bash(npm start:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(node server.js)",
+      "Bash(npm install:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(dir /b \"C:\\\\Users\\\\HENRRY\\\\Desktop\\\\SISTEMA_RIEGO\")"
+    ]
+  }
+}
