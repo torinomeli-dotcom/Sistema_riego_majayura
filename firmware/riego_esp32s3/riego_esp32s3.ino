@@ -548,6 +548,13 @@ void controlAutoBombillos() {
 // ACTUADORES
 // =====================================================================
 void setValvula(bool on, bool porAuto, const char* motivo) {
+  if (on && !tanqueLleno) {
+    // Tanque vacío — bloquear apertura sin importar el modo
+    strncpy(motivoRiego, "Tanque vacio!", sizeof(motivoRiego) - 1);
+    Serial.println("[VALVULA] Bloqueada — tanque vacio");
+    transmitirEstado();  // notificar dashboard del rechazo
+    return;
+  }
   valvulaOn = on;
   digitalWrite(PIN_VALVULA, on ? HIGH : LOW);
   if (on) tValvulaOn = millis();
