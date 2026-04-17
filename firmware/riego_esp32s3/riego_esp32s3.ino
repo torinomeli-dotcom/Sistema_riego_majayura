@@ -160,7 +160,7 @@ int           pantallaEstado   = 0;
 #define MENU_VER_IP     4
 #define MENU_SENSORES   5
 #define MENU_RESET_CNT  6
-#define MENU_RESET_WIFI 7
+#define MENU_WIFI_BORRAR 7
 #define MENU_ITEMS      8
 
 bool          enMenu        = false;
@@ -170,8 +170,7 @@ unsigned long tUltimasTecla = 0;
 
 const char* menuNombres[MENU_ITEMS] = {
   "Valvula  ", "Bombill1 ", "Bombill2 ",
-  "ModoAuto ", "Ver IP   ", "Sensores ",
-  "ResetCnt ", "BorrarWiFi"
+  "ModoAuto ", "Ver IP   ", "Sensores ", "ResetCnt ", "BorrarWiFi"
 };
 
 // Prototipos
@@ -179,7 +178,7 @@ void        actualizarFirmwareOTA(const char* url);
 void        guardarCalibracion();
 void        cargarCalibracion();
 void        lcdMsg(const char* l1, const char* l2);
-void        lcdScroll(const char* l1, const char* l2, int msDelay);
+void        lcdScrollBoot();
 int         leerSensor(int pin);
 int         adcAPorcentaje(int adc);
 const char* estadoSensor(int adc);
@@ -216,20 +215,20 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL);
   lcd.init();
   lcd.backlight();
-  lcdScroll("  RIEGO MI MAJAYURA  ", "  by UniGuajira  ", 200);
-  // Sin delay: el LCD ya muestra el mensaje, no hay que esperar
+  lcdScrollBoot();
 
   prefs.begin("riego", true);
   modoAuto = prefs.getBool("modoAuto", true);
   prefs.end();
   cargarCalibracion();
 
-  WiFi.persistent(true);
+  WiFi.persistent(true);  // garantiza escritura en NVS antes de reiniciar
 
   wm.setAPCallback([](WiFiManager*) {
     lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
   });
-  wm.setConfigPortalTimeout(120);
+  wm.setBreakAfterConfig(true);  // guarda credenciales aunque la conexión falle
+  wm.setConfigPortalTimeout(180);
   wm.setConnectTimeout(20);
 
   Serial.println("[BOOT] Iniciando WiFiManager...");
@@ -550,11 +549,6 @@ void controlAutoBombillos() {
 // ACTUADORES
 // =====================================================================
 void setValvula(bool on, bool porAuto, const char* motivo) {
-  if (on && !tanqueLleno) {
-    strncpy(motivoRiego, "Tanque vacio!", sizeof(motivoRiego) - 1);
-    Serial.println("[VALVULA] Bloqueada — tanque vacio");
-    return;
-  }
   valvulaOn = on;
   digitalWrite(PIN_VALVULA, on ? HIGH : LOW);
   if (on) tValvulaOn = millis();
@@ -671,12 +665,12 @@ void ejecutarItemMenu(int item) {
       lcdMsg("Contador        ", "reseteado OK    ");
       delay(1000);
       break;
-    case MENU_RESET_WIFI:
+    case MENU_WIFI_BORRAR:
       lcdMsg("Borrando WiFi...", "Reiniciando...  ");
-      delay(1500);
+      delay(1200);
       wm.resetSettings();
       ESP.restart();
-      return;
+      break;
   }
   dibujarMenu();
   transmitirEstado();
@@ -839,20 +833,29 @@ void cargarCalibracion() {
 // =====================================================================
 // LCD
 // =====================================================================
-void lcdScroll(const char* l1, const char* l2, int msDelay) {
-  String s1 = String("                ") + l1 + "                ";
-  String s2 = String("                ") + l2 + "                ";
-  int pasos = max(strlen(l1), strlen(l2)) + 16;
-  lcd.clear();
-  for (int i = 0; i < pasos; i++) {
-    lcd.setCursor(0, 0); lcd.print(s1.substring(i, i + 16));
-    lcd.setCursor(0, 1); lcd.print(s2.substring(i, i + 16));
-    delay(msDelay);
-  }
-}
-
 void lcdMsg(const char* l1, const char* l2) {
   lcd.clear();
   lcd.setCursor(0, 0); lcd.print(l1);
   lcd.setCursor(0, 1); lcd.print(l2);
+}
+
+void lcdScrollBoot() {
+  // Desliza "RIEGO MI MAJAYURA" y "by UniGuajira" de derecha a izquierda
+  const char* t1 = "RIEGO MI MAJAYURA";
+  const char* t2 = "  by UniGuajira  ";
+  int len1 = strlen(t1);
+  int len2 = strlen(t2);
+
+  lcd.clear();
+  for (int pos = 15; pos >= 0; pos--) {
+    char row1[17], row2[17];
+    memset(row1, ' ', 16); row1[16] = '\0';
+    memset(row2, ' ', 16); row2[16] = '\0';
+    for (int c = 0; c < len1 && pos + c < 16; c++) row1[pos + c] = t1[c];
+    for (int c = 0; c < len2 && pos + c < 16; c++) row2[pos + c] = t2[c];
+    lcd.setCursor(0, 0); lcd.print(row1);
+    lcd.setCursor(0, 1); lcd.print(row2);
+    delay(90);
+  }
+  delay(1200);
 }
