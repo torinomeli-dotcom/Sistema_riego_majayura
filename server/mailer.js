@@ -71,4 +71,36 @@ async function enviarResetClave(token, baseUrl) {
   });
 }
 
-module.exports = { enviarResetClave };
+// ── ALERTA TANQUE VACÍO ───────────────────────────────────────────────────────
+async function enviarAlertaTanque({ esRecordatorio = false, dashboardUrl = '' }) {
+  const ahora = new Date().toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
+  const asunto = esRecordatorio
+    ? `[Riego Majayura] ⚠️ RECORDATORIO: Tanque aún vacío (${ahora})`
+    : `[Riego Majayura] 🚨 ALERTA: Tanque de agua vacío (${ahora})`;
+
+  const linkBtn = dashboardUrl
+    ? `<a href="${dashboardUrl}" style="display:inline-block;margin:1rem 0;padding:0.75rem 1.5rem;background:#e74c3c;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Ver Dashboard</a>`
+    : '';
+
+  return _enviar({
+    asunto,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0d1117;color:#e6edf3;padding:2rem;border-radius:12px;border:1px solid #21262d">
+        <h2 style="color:#e74c3c;margin-top:0">💧 Riego Mi Majayura — ${esRecordatorio ? 'Recordatorio: Tanque vacío' : 'Tanque de agua vacío'}</h2>
+        <p style="font-size:1.05rem">${esRecordatorio ? 'El tanque <strong>sigue vacío</strong>' : 'El sensor detectó que el <strong>tanque de agua está vacío</strong>'}.</p>
+        <p>⏰ <strong>Hora:</strong> ${ahora}<br>
+           🔒 <strong>Estado:</strong> Válvula bloqueada — no riega hasta que haya agua.<br>
+           📋 <strong>Acción requerida:</strong> Llenar el tanque lo antes posible.</p>
+        ${linkBtn}
+        <p style="font-size:0.8rem;color:#8b949e;margin-top:1.5rem">Este correo se envía automáticamente cuando el sensor de nivel detecta tanque vacío.</p>
+      </div>
+    `,
+    texto: `${esRecordatorio ? 'RECORDATORIO' : 'ALERTA'} — Tanque de agua vacío\nHora: ${ahora}\nEl riego está bloqueado hasta que se llene el tanque.\n${dashboardUrl ? 'Dashboard: ' + dashboardUrl : ''}`
+  });
+}
+
+module.exports = { enviarResetClave, enviarAlertaTanque };

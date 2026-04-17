@@ -20,7 +20,7 @@ const urlModule           = require('url');
 const authRoutes = require('./routes/auth');
 const apiRoutes  = require('./routes/api');
 const { initDB, guardarHistorial, obtenerHistorial } = require('./database');
-const { enviarAlertaTanque } = require('../mailer');
+const { enviarAlertaTanque } = require('./mailer');
 
 // Alerta tanque vacío — máximo 1 correo cada 2 horas
 const INTERVALO_ALERTA_TANQUE = 2 * 60 * 60 * 1000;
