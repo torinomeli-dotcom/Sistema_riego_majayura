@@ -179,6 +179,7 @@ void        actualizarFirmwareOTA(const char* url);
 void        guardarCalibracion();
 void        cargarCalibracion();
 void        lcdMsg(const char* l1, const char* l2);
+void        lcdScroll(const char* l1, const char* l2, int msDelay);
 int         leerSensor(int pin);
 int         adcAPorcentaje(int adc);
 const char* estadoSensor(int adc);
@@ -215,7 +216,7 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL);
   lcd.init();
   lcd.backlight();
-  lcdMsg("RIEGO MI MAJAYUR", "    La Guajira  ");
+  lcdScroll("  RIEGO MI MAJAYURA  ", "  by UniGuajira  ", 200);
   // Sin delay: el LCD ya muestra el mensaje, no hay que esperar
 
   prefs.begin("riego", true);
@@ -838,6 +839,18 @@ void cargarCalibracion() {
 // =====================================================================
 // LCD
 // =====================================================================
+void lcdScroll(const char* l1, const char* l2, int msDelay) {
+  String s1 = String("                ") + l1 + "                ";
+  String s2 = String("                ") + l2 + "                ";
+  int pasos = max(strlen(l1), strlen(l2)) + 16;
+  lcd.clear();
+  for (int i = 0; i < pasos; i++) {
+    lcd.setCursor(0, 0); lcd.print(s1.substring(i, i + 16));
+    lcd.setCursor(0, 1); lcd.print(s2.substring(i, i + 16));
+    delay(msDelay);
+  }
+}
+
 void lcdMsg(const char* l1, const char* l2) {
   lcd.clear();
   lcd.setCursor(0, 0); lcd.print(l1);
