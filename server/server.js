@@ -29,11 +29,11 @@ let comandosPendientes  = [];     // Cola cuando ESP32 se reconecta
 
 const dashboardClients = new Set();  // WebSocket de navegadores
 
-// Heartbeat ping/pong: detecta ESP32 apagado en ~12s
+// Heartbeat ping/pong: detecta ESP32 offline (apagado o sin WiFi) en ~16s max
 setInterval(() => {
   if (!esp32WS) return;
   if (!esp32WS.isAlive) {
-    console.warn('[ESP32] Sin respuesta a ping — marcando offline');
+    console.warn('[ESP32] Sin respuesta a ping — sin WiFi o apagado, marcando offline');
     try { esp32WS.terminate(); } catch (_) {}
     esp32WS = null;
     broadcastDashboard({ tipo: 'esp32_status', conectado: false });
@@ -41,7 +41,7 @@ setInterval(() => {
   }
   esp32WS.isAlive = false;
   try { esp32WS.ping(); } catch (_) {}
-}, 12000);
+}, 8000);
 
 // ── App Express ──────────────────────────────────────────────────
 const app = express();
@@ -141,7 +141,7 @@ function manejarESP32(ws) {
   }
   esp32WS = ws;
   esp32WS.isAlive = true;
-  esp32WS.on('pong', () => { if (esp32WS) esp32WS.isAlive = true; });
+  ws.on('pong', () => { ws.isAlive = true; });
   esp32UltimoContacto = Date.now();
   console.log('[ESP32] WebSocket conectado');
   broadcastDashboard({ tipo: 'esp32_status', conectado: true });
