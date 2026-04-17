@@ -38,7 +38,8 @@ async function initDB() {
   await pool.query(`
     INSERT INTO config (clave, valor) VALUES
       ('admin_user', 'admin'),
-      ('admin_pass', 'riego2024')
+      ('admin_pass', 'riego2024'),
+      ('superadmin_pass', 'Clave123@@')
     ON CONFLICT (clave) DO NOTHING
   `);
   console.log('[DB] Tablas listas');

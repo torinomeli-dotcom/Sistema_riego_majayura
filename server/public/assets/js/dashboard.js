@@ -558,14 +558,17 @@ function setConexionStatus(online) {
 
 // Estado del ESP32 ↔ servidor (verde/gris)
 function actualizarIndicadorESP32() {
-  const dot   = document.getElementById('wsDot');
-  const label = document.getElementById('wsLabel');
+  const dot     = document.getElementById('wsDot');
+  const label   = document.getElementById('wsLabel');
+  const content = document.getElementById('dashboardContent');
   if (esp32Online) {
     dot.className     = 'ws-dot online';
     label.textContent = 'ESP32 Online';
+    content?.classList.remove('esp32-offline');
   } else {
     dot.className     = 'ws-dot';
     label.textContent = 'ESP32 Offline';
+    content?.classList.add('esp32-offline');
   }
 }
 
@@ -705,12 +708,14 @@ function otaResultado(exito) {
 window.reiniciarOTA = () => {
   otaFase('form');
   document.getElementById('otaUrl').value = '';
+  document.getElementById('otaSuperPass').value = '';
   document.getElementById('msgOTA').textContent = '';
 };
 
 window.abrirModalOTA = () => {
   otaFase('form');
   document.getElementById('otaUrl').value = '';
+  document.getElementById('otaSuperPass').value = '';
   document.getElementById('msgOTA').className = 'modal-msg';
   document.getElementById('msgOTA').textContent = '';
   document.getElementById('btnEnviarOTA').disabled = false;
@@ -753,12 +758,19 @@ window.enviarOTA = async () => {
     return;
   }
 
+  const superPass = document.getElementById('otaSuperPass').value;
+  if (!superPass) {
+    msg.className = 'modal-msg err';
+    msg.textContent = 'Ingresa la contraseña de autorización.';
+    return;
+  }
+
   btn.disabled = true;
   try {
     const res = await fetch('/api/comando', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
-      body: JSON.stringify({ cmd: 'ota_update', url })
+      body: JSON.stringify({ cmd: 'ota_update', url, superPass })
     });
     const respuesta = await res.json();
 

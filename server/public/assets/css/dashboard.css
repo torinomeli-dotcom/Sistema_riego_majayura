@@ -1210,3 +1210,26 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ── Dashboard offline — controles grises y deshabilitados ───── */
+.card-act, .card-sensores, .card-historial, .card-cultivo {
+  transition: filter 0.5s ease, opacity 0.5s ease;
+}
+.btn-act {
+  transition: filter 0.5s ease, opacity 0.5s ease, background 0.2s, transform 0.15s;
+}
+#dashboardContent.esp32-offline .card-act,
+#dashboardContent.esp32-offline .card-sensores,
+#dashboardContent.esp32-offline .card-historial,
+#dashboardContent.esp32-offline .card-cultivo {
+  filter: grayscale(1);
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+#dashboardContent.esp32-offline .btn-act {
+  cursor: not-allowed;
+}
+#dashboardContent.esp32-offline .alerta-enchar {
+  display: none !important;
+}

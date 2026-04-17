@@ -5,7 +5,7 @@
 
 const express = require('express');
 const jwt     = require('jsonwebtoken');
-const { obtenerHistorialDesde } = require('../database');
+const { obtenerHistorialDesde, getConfig } = require('../database');
 
 // Middleware de autenticación JWT
 function requireAuth(req, res, next) {
@@ -47,14 +47,14 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
   });
 
   // ── POST /api/comando — enviar comando al ESP32 ─────────────────
-  router.post('/comando', requireAuth, cmdLimit, (req, res) => {
+  router.post('/comando', requireAuth, cmdLimit, async (req, res) => {
     const { cmd, estado, auto,
             umbral_seco, umbral_humedo, umbral_encharcado,
             min_riego_ms, max_riego_ms, cultivo } = req.body;
 
     const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar', 'ota_update'];
     if (!cmd || !comandosValidos.includes(cmd)) {
-      return res.status(400).json({ error: `Comando inválido. Válidos: ${comandosValidos.join(', ')}` });
+      return res.status(400).json({ error: `Comando inválido.` });
     }
 
     const payload = { cmd };
@@ -66,9 +66,14 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
       if (max_riego_ms      !== undefined) payload.max_riego_ms      = Number(max_riego_ms);
       if (cultivo           !== undefined) payload.cultivo           = String(cultivo).slice(0, 31);
     } else if (cmd === 'ota_update') {
-      const url = String(req.body.url || '').trim();
-      if (!url.startsWith('https://')) {
-        return res.status(400).json({ error: 'La URL debe ser HTTPS.' });
+      const url      = String(req.body.url      || '').trim();
+      const superPass = String(req.body.superPass || '').trim();
+      if (!url.startsWith('https://') || !url.toLowerCase().includes('.bin')) {
+        return res.status(400).json({ error: 'URL inválida. Debe ser HTTPS y apuntar a un .bin' });
+      }
+      const claveSuper = await getConfig('superadmin_pass');
+      if (!superPass || superPass !== claveSuper) {
+        return res.status(403).json({ error: 'Contraseña de autorización incorrecta.' });
       }
       payload.url = url;
     } else {
@@ -78,13 +83,12 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
 
     const enviado = enviarComandoESP32(payload);
 
-    // OTA se encola aunque ESP32 no esté conectado en este momento exacto
-    if (!enviado && cmd !== 'ota_update') {
+    if (!enviado) {
       return res.status(503).json({ error: 'ESP32 no conectado.' });
     }
 
-    console.log(`[API] Comando ${enviado ? 'enviado' : 'encolado'} por ${req.user.sub}: ${JSON.stringify(payload)}`);
-    res.json({ ok: true, cmd: payload, encolado: !enviado });
+    console.log(`[API] Comando enviado por ${req.user.sub}: ${JSON.stringify(payload)}`);
+    res.json({ ok: true, cmd: payload, encolado: false });
   });
 
   // ── GET /api/historial — últimas 100 lecturas ───────────────────

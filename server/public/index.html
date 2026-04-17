@@ -49,15 +49,13 @@
 
     <!-- FASE 1: formulario -->
     <div id="otaFaseForm">
-      <p class="modal-ota-steps">
-        1. En Arduino IDE → <b>Sketch → Export Compiled Binary</b><br>
-        2. Sube el archivo <b>.bin</b> a GitHub (URL pública HTTPS)<br>
-        3. Pega la URL aquí y presiona Actualizar
-      </p>
+      <div class="modal-field">
+        <label class="modal-label">Contraseña de autorización</label>
+        <input type="password" id="otaSuperPass" class="modal-input" placeholder="••••••••" autocomplete="off">
+      </div>
       <div class="modal-field">
         <label class="modal-label">URL del archivo .bin (HTTPS)</label>
-        <input type="url" id="otaUrl" class="modal-input"
-          placeholder="https://raw.githubusercontent.com/...">
+        <input type="url" id="otaUrl" class="modal-input" placeholder="https://...">
       </div>
       <div class="modal-msg" id="msgOTA"></div>
       <div class="modal-footer">
@@ -115,7 +113,7 @@
 </div>
 
 <!-- ── MAIN CONTENT ────────────────────────────────────────────── -->
-<div class="container-fluid px-3 px-md-4 mt-4">
+<div class="container-fluid px-3 px-md-4 mt-4" id="dashboardContent">
 
   <!-- ── FILA ACTUADORES ─────────────────────────────────────── -->
   <div class="row g-3 mb-4">
