@@ -175,12 +175,14 @@ function manejarDashboard(ws) {
   dashboardClients.add(ws);
   console.log(`[Dashboard] WS conectado (total: ${dashboardClients.size})`);
 
-  // Enviar estado actual inmediatamente al conectar
+  // Enviar estado actual + status ESP32 inmediatamente al conectar
   if (ultimoEstado) {
     try { ws.send(JSON.stringify(ultimoEstado)); } catch (_) {}
   } else {
     try { ws.send(JSON.stringify({ tipo: 'info', mensaje: 'Esperando datos del ESP32...' })); } catch (_) {}
   }
+  const esp32Ahora = esp32WS !== null && esp32WS.readyState === 1;
+  try { ws.send(JSON.stringify({ tipo: 'esp32_status', conectado: esp32Ahora })); } catch (_) {}
 
   ws.on('close', () => {
     dashboardClients.delete(ws);

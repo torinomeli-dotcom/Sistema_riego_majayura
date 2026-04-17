@@ -503,9 +503,10 @@ function conectarWS() {
         actualizarIndicadorESP32();
 
         if (otaEnProgreso && data.conectado) {
-          // ESP32 reconectó — esperamos la telemetría para confirmar éxito o fallo
+          clearInterval(otaProgressInterval);
+          otaSetProgress(95);
           const txt = document.getElementById('otaEstadoTxt');
-          if (txt) txt.textContent = '🔗 ESP32 reconectado — verificando...';
+          if (txt) txt.textContent = '🔗 ESP32 reconectado — verificando resultado...';
         }
       } else if (data.sensores || data.tipo === 'telemetria') {
         esp32Online = true;
