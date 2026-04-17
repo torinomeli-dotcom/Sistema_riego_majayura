@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  RIEGO IOT — Servidor Node.js v5.0                      ║
+ * ║  RIEGO IOT — Servidor Node.js v6.0                      ║
  * ║  ESP32 ↔ WebSocket  |  Navegador ↔ WebSocket            ║
  * ║  Majayura, La Guajira, Colombia                         ║
  * ╚══════════════════════════════════════════════════════════╝
@@ -85,7 +85,7 @@ app.get('/api/salud', (_req, res) => {
     clientesDashboard:  dashboardClients.size,
     comandosPendientes: comandosPendientes.length,
     uptime:             Math.floor(process.uptime()),
-    version:            '5.0.0'
+    version:            '6.0.0'
   });
 });
 
@@ -274,7 +274,7 @@ httpServer.on('upgrade', (req, socket, head) => {
 initDB().then(() => {
   httpServer.listen(PORT, () => {
     console.log('\n╔══════════════════════════════════════════╗');
-    console.log('║   RIEGO IOT — Servidor v5.0 iniciado     ║');
+    console.log('║   RIEGO IOT — Servidor v6.0 iniciado     ║');
     console.log(`║   Puerto: ${PORT}                             ║`);
     console.log('║   ESP32  WS: /ws/esp32                   ║');
     console.log('║   Naveg. WS: /ws/dashboard               ║');
