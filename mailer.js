@@ -33,7 +33,7 @@ async function _enviar({ to, asunto, html, texto }) {
   }
   try {
     const { data, error } = await client.emails.send({
-      from:    `Riego IoT <${FROM_EMAIL}>`,
+      from:    `Riego Mi Majayura <${FROM_EMAIL}>`,
       to:      [to || ADMIN_EMAIL],
       subject: asunto,
       html:    html || `<p>${texto}</p>`,
@@ -55,10 +55,10 @@ async function _enviar({ to, asunto, html, texto }) {
 async function enviarResetClave(token, baseUrl) {
   const enlace = `${baseUrl}/reset.html?token=${token}`;
   return _enviar({
-    asunto: '[Riego IoT] Recuperar contraseña',
+    asunto: '[Riego Mi Majayura] Recuperar contraseña',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0d1117;color:#e6edf3;padding:2rem;border-radius:12px;border:1px solid #21262d">
-        <h2 style="color:#3fb950;margin-top:0">🌱 Riego IoT — Recuperar contraseña</h2>
+        <h2 style="color:#3fb950;margin-top:0">💧 Riego Mi Majayura — Recuperar contraseña</h2>
         <p>Se solicitó restablecer la contraseña del sistema de riego.</p>
         <p>Haz clic en el botón para crear una nueva contraseña:<br><small style="color:#8b949e">(enlace válido por 30 minutos)</small></p>
         <a href="${enlace}" style="display:inline-block;margin:1rem 0;padding:0.75rem 1.5rem;background:#3fb950;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
@@ -67,7 +67,7 @@ async function enviarResetClave(token, baseUrl) {
         <p style="font-size:0.8rem;color:#8b949e">Si no solicitaste esto, ignora este correo.</p>
       </div>
     `,
-    texto: `Riego IoT — Recuperar contraseña\n\nEnlace (válido 30 min):\n${enlace}\n\nSi no solicitaste esto, ignora este mensaje.`
+    texto: `Riego Mi Majayura — Recuperar contraseña\n\nEnlace (válido 30 min):\n${enlace}\n\nSi no solicitaste esto, ignora este mensaje.`
   });
 }
 
