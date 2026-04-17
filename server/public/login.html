@@ -207,7 +207,10 @@
       </div>
       <div class="mb-3">
         <label class="form-label">Contraseña</label>
-        <input type="password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
+        <div style="position:relative">
+          <input type="password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password" required style="padding-right:2.8rem">
+          <button type="button" id="btnVerPass" onclick="togglePass()" style="position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:0.2rem;font-size:1.1rem;line-height:1" title="Ver/ocultar contraseña">👁</button>
+        </div>
       </div>
 
       <button type="submit" class="btn-login" id="btnLogin">
@@ -254,6 +257,15 @@
         animation-delay: ${Math.random() * 5}s;
       `;
       bg.appendChild(drop);
+    }
+
+    // ── Ver/ocultar contraseña ──────────────────────────────────
+    function togglePass() {
+      const input = document.getElementById('password');
+      const btn   = document.getElementById('btnVerPass');
+      const mostrar = input.type === 'password';
+      input.type  = mostrar ? 'text' : 'password';
+      btn.textContent = mostrar ? '🙈' : '👁';
     }
 
     // ── Login ───────────────────────────────────────────────────
