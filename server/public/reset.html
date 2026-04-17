@@ -37,12 +37,18 @@
     <div id="formWrap">
       <div class="mb">
         <label>Nueva contraseña</label>
-        <input type="password" id="claveNueva" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        <div style="position:relative">
+          <input type="password" id="claveNueva" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="padding-right:2.8rem">
+          <button type="button" onclick="togglePass('claveNueva','btn1')" id="btn1" style="position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#8b949e;cursor:pointer;padding:0.2rem;font-size:1.1rem;line-height:1">👁</button>
+        </div>
         <small style="color:#8b949e;font-size:0.75rem;display:block;margin-top:0.3rem">Debe incluir mayúscula, número y carácter especial</small>
       </div>
       <div class="mb">
         <label>Confirmar contraseña</label>
-        <input type="password" id="claveConfirm" placeholder="••••••••" autocomplete="new-password">
+        <div style="position:relative">
+          <input type="password" id="claveConfirm" placeholder="••••••••" autocomplete="new-password" style="padding-right:2.8rem">
+          <button type="button" onclick="togglePass('claveConfirm','btn2')" id="btn2" style="position:absolute;right:0.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#8b949e;cursor:pointer;padding:0.2rem;font-size:1.1rem;line-height:1">👁</button>
+        </div>
       </div>
       <button class="btn" id="btnReset" onclick="resetear()">Guardar nueva contraseña</button>
       <div class="msg" id="msg"></div>
@@ -50,6 +56,14 @@
   </div>
 
   <script>
+    function togglePass(inputId, btnId) {
+      const input = document.getElementById(inputId);
+      const btn   = document.getElementById(btnId);
+      const mostrar = input.type === 'password';
+      input.type  = mostrar ? 'text' : 'password';
+      btn.textContent = mostrar ? '🙈' : '👁';
+    }
+
     const params = new URLSearchParams(window.location.search);
     const token  = params.get('token');
 
