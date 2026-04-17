@@ -114,8 +114,7 @@ router.post('/recuperar', rateLimit({ windowMs: 60*1000, max: 3,
   const expiry = Date.now() + 30 * 60 * 1000; // 30 minutos
   resetTokens.set(token, { expiry });
 
-  const proto   = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
-  const baseUrl = `${proto}://${req.get('host')}`;
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
   const enviado = await enviarResetClave(token, baseUrl);
 
   if (!enviado) {
