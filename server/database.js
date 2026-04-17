@@ -40,7 +40,8 @@ async function guardarResetToken(token, expiry) {
 
 async function obtenerResetToken(token) {
   const res = await pool.query('SELECT expiry FROM reset_tokens WHERE token = $1', [token]);
-  return res.rows[0] || null;
+  if (!res.rows[0]) return null;
+  return { expiry: parseInt(res.rows[0].expiry, 10) };
 }
 
 async function eliminarResetToken(token) {
