@@ -510,6 +510,10 @@ function conectarWS() {
           const txt = document.getElementById('otaEstadoTxt');
           if (txt) txt.textContent = '🔗 ESP32 reconectado — verificando resultado...';
         }
+        if (otaEnProgreso && !data.conectado) {
+          const txt = document.getElementById('otaEstadoTxt');
+          if (txt) txt.textContent = '🔄 ESP32 reiniciando — esperando reconexión...';
+        }
       } else if (data.sensores || data.tipo === 'telemetria') {
         esp32Online = true;
         actualizarIndicadorESP32();
@@ -725,10 +729,27 @@ window.enviarOTA = async () => {
   const url = document.getElementById('otaUrl').value.trim();
   const msg = document.getElementById('msgOTA');
   const btn = document.getElementById('btnEnviarOTA');
+  msg.className = 'modal-msg'; msg.textContent = '';
 
+  // ── Validaciones previas ────────────────────────────────────
+  if (!url) {
+    msg.className = 'modal-msg err';
+    msg.textContent = 'Ingresa la URL del archivo .bin.';
+    return;
+  }
   if (!url.startsWith('https://')) {
     msg.className = 'modal-msg err';
     msg.textContent = 'La URL debe comenzar con https://';
+    return;
+  }
+  if (!url.toLowerCase().includes('.bin')) {
+    msg.className = 'modal-msg err';
+    msg.textContent = 'La URL debe apuntar a un archivo .bin';
+    return;
+  }
+  if (!esp32Online) {
+    msg.className = 'modal-msg err';
+    msg.textContent = '⚠ ESP32 no está conectado. Enciéndelo e intenta de nuevo.';
     return;
   }
 
@@ -739,24 +760,36 @@ window.enviarOTA = async () => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify({ cmd: 'ota_update', url })
     });
-    if (res.ok) {
-      const respuesta = await res.json();
-      otaEnProgreso = true;
-      otaFase('progreso');
-      otaIniciarBarraSimulada();
-      if (respuesta.encolado) {
-        document.getElementById('otaEstadoTxt').textContent = '🔄 Esperando que el ESP32 conecte para enviar OTA...';
-      }
-      // Watchdog 5 min
-      otaTimeout = setTimeout(() => {
-        if (otaEnProgreso) otaResultado(false);
-      }, 300000);
-    } else {
-      const e = await res.json();
+    const respuesta = await res.json();
+
+    if (!res.ok) {
       msg.className = 'modal-msg err';
-      msg.textContent = e.error || 'Error enviando comando.';
+      msg.textContent = respuesta.error || 'Error enviando comando.';
       btn.disabled = false;
+      return;
     }
+
+    if (respuesta.encolado) {
+      // ESP32 se desconectó justo en el momento del envío
+      msg.className = 'modal-msg err';
+      msg.textContent = '⚠ El ESP32 se desconectó al momento de enviar. Intenta de nuevo.';
+      btn.disabled = false;
+      return;
+    }
+
+    // Comando llegó al ESP32 — iniciar seguimiento
+    otaEnProgreso = true;
+    otaFase('progreso');
+    otaIniciarBarraSimulada();
+
+    // Watchdog 4 min — si no responde, fallo
+    otaTimeout = setTimeout(() => {
+      if (otaEnProgreso) {
+        otaResultado(false);
+        document.getElementById('otaResultadoMsg').textContent = 'Tiempo de espera agotado. El ESP32 no respondió.';
+      }
+    }, 240000);
+
   } catch {
     msg.className = 'modal-msg err';
     msg.textContent = 'Error de conexión con el servidor.';
