@@ -674,11 +674,25 @@ void ejecutarItemMenu(int item) {
       delay(1000);
       break;
     case MENU_RESET_WIFI:
-      lcdMsg("Borrando WiFi...", "Reiniciando...  ");
-      delay(1500);
-      wm.resetSettings();   // borra credenciales WiFi de NVS
-      ESP.restart();        // reinicia para abrir el portal
-      return;               // no continua
+      lcdMsg("Confirma con [#]", "Cancela: otra   ");
+      {
+        unsigned long t0 = millis();
+        char confirm = 0;
+        while (millis() - t0 < 10000) {  // espera hasta 10s
+          confirm = keypad.getKey();
+          if (confirm) break;
+        }
+        if (confirm == '#') {
+          lcdMsg("Borrando WiFi...", "Reiniciando...  ");
+          delay(1000);
+          wm.resetSettings();
+          ESP.restart();
+          return;
+        }
+        lcdMsg("Cancelado       ", "WiFi sin cambios");
+        delay(1200);
+      }
+      break;
   }
   dibujarMenu();
   transmitirEstado();
