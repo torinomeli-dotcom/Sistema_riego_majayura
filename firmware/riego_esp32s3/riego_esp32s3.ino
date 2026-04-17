@@ -215,7 +215,7 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL);
   lcd.init();
   lcd.backlight();
-  lcdMsg(" RIEGO MAJAYURA ", "   La Guajira   ");
+  lcdMsg("RIEGO MI MAJAYUR", "    La Guajira  ");
   // Sin delay: el LCD ya muestra el mensaje, no hay que esperar
 
   prefs.begin("riego", true);
