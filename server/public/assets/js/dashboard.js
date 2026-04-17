@@ -11,6 +11,8 @@
 const TOKEN = localStorage.getItem('riego_token');
 if (!TOKEN) {
   window.location.href = '/login.html';
+} else {
+  document.body.style.visibility = 'visible';
 }
 
 // ── Configuración de sensores ───────────────────────────────────
@@ -793,8 +795,8 @@ window.guardarClave = async () => {
   if (!claveActual || !claveNueva || !claveConfirm) {
     msg.className = 'modal-msg err'; msg.textContent = 'Completa todos los campos.'; return;
   }
-  if (claveNueva.length < 6) {
-    msg.className = 'modal-msg err'; msg.textContent = 'La nueva clave debe tener mínimo 6 caracteres.'; return;
+  if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(claveNueva)) {
+    msg.className = 'modal-msg err'; msg.textContent = 'La clave debe tener mínimo 8 caracteres, una mayúscula, un número y un carácter especial.'; return;
   }
   if (claveNueva !== claveConfirm) {
     msg.className = 'modal-msg err'; msg.textContent = 'Las contraseñas no coinciden.'; return;

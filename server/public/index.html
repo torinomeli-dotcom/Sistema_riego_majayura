@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/dashboard.css?v=6.5">
+  <style>body{visibility:hidden}</style>
 </head>
 <body>
 
@@ -98,7 +99,8 @@
     </div>
     <div class="modal-field">
       <label class="modal-label">Nueva contraseña</label>
-      <input type="password" id="claveNueva" class="modal-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      <input type="password" id="claveNueva" class="modal-input" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+      <small style="color:#8b949e;font-size:0.75rem">Debe incluir mayúscula, número y carácter especial</small>
     </div>
     <div class="modal-field">
       <label class="modal-label">Confirmar nueva contraseña</label>

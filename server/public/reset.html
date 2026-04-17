@@ -37,7 +37,8 @@
     <div id="formWrap">
       <div class="mb">
         <label>Nueva contraseña</label>
-        <input type="password" id="claveNueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        <input type="password" id="claveNueva" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        <small style="color:#8b949e;font-size:0.75rem;display:block;margin-top:0.3rem">Debe incluir mayúscula, número y carácter especial</small>
       </div>
       <div class="mb">
         <label>Confirmar contraseña</label>
@@ -64,7 +65,8 @@
       const msg = document.getElementById('msg');
       msg.className = 'msg'; msg.style.display = 'none';
 
-      if (claveNueva.length < 6) return mostrarMsg('La contraseña debe tener mínimo 6 caracteres.', 'err');
+      if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(claveNueva))
+        return mostrarMsg('La clave debe tener mínimo 8 caracteres, una mayúscula, un número y un carácter especial.', 'err');
       if (claveNueva !== claveConfirm) return mostrarMsg('Las contraseñas no coinciden.', 'err');
 
       btn.disabled = true; btn.textContent = 'Guardando...';

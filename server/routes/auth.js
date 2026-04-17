@@ -71,8 +71,8 @@ router.post('/cambiar-clave', requireAuth, async (req, res) => {
   if (!claveActual || !claveNueva)
     return res.status(400).json({ error: 'Campos requeridos.' });
 
-  if (claveNueva.length < 6)
-    return res.status(400).json({ error: 'La nueva clave debe tener mínimo 6 caracteres.' });
+  if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(claveNueva))
+    return res.status(400).json({ error: 'La clave debe tener mínimo 8 caracteres, una mayúscula, un número y un carácter especial.' });
 
   const adminPass = await getConfig('admin_pass');
   if (claveActual !== adminPass)
@@ -114,8 +114,8 @@ router.post('/reset', async (req, res) => {
   if (!token || !claveNueva)
     return res.status(400).json({ error: 'Token y nueva clave requeridos.' });
 
-  if (claveNueva.length < 6)
-    return res.status(400).json({ error: 'La clave debe tener mínimo 6 caracteres.' });
+  if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(claveNueva))
+    return res.status(400).json({ error: 'La clave debe tener mínimo 8 caracteres, una mayúscula, un número y un carácter especial.' });
 
   const datos = await obtenerResetToken(token);
   if (!datos || Date.now() > datos.expiry) {
