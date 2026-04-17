@@ -223,10 +223,13 @@ void setup() {
   prefs.end();
   cargarCalibracion();
 
+  WiFi.persistent(true);
+
   wm.setAPCallback([](WiFiManager*) {
     lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
   });
-  wm.setConfigPortalTimeout(120);
+  wm.setBreakAfterConfig(true);
+  wm.setConfigPortalTimeout(180);
   wm.setConnectTimeout(20);
 
   Serial.println("[BOOT] Iniciando WiFiManager...");
