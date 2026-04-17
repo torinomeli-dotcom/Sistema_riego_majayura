@@ -21,7 +21,34 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
-  console.log('[DB] Tabla historial lista');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      token      TEXT PRIMARY KEY,
+      expiry     BIGINT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  console.log('[DB] Tablas listas');
+}
+
+async function guardarResetToken(token, expiry) {
+  await pool.query(
+    'INSERT INTO reset_tokens (token, expiry) VALUES ($1, $2) ON CONFLICT (token) DO UPDATE SET expiry = $2',
+    [token, expiry]
+  );
+}
+
+async function obtenerResetToken(token) {
+  const res = await pool.query('SELECT expiry FROM reset_tokens WHERE token = $1', [token]);
+  return res.rows[0] || null;
+}
+
+async function eliminarResetToken(token) {
+  await pool.query('DELETE FROM reset_tokens WHERE token = $1', [token]);
+}
+
+async function limpiarTokensExpirados() {
+  await pool.query('DELETE FROM reset_tokens WHERE expiry < $1', [Date.now()]);
 }
 
 async function guardarHistorial({ ts, sensores, valvula, alerta }) {
@@ -47,4 +74,4 @@ async function obtenerHistorialDesde(desdeTs, maxRows = 5000) {
   return res.rows;
 }
 
-module.exports = { pool, initDB, guardarHistorial, obtenerHistorial, obtenerHistorialDesde };
+module.exports = { pool, initDB, guardarHistorial, obtenerHistorial, obtenerHistorialDesde, guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados };

@@ -6,6 +6,7 @@ const fs        = require('fs');
 const path      = require('path');
 const rateLimit = require('express-rate-limit');
 const { enviarResetClave } = require('../mailer');
+const { guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados } = require('../database');
 
 const router = express.Router();
 
@@ -13,9 +14,6 @@ const router = express.Router();
 const loginLimit = rateLimit({ windowMs: 60*1000, max: 5,
   message: { error: 'Demasiados intentos. Espera 1 minuto.' }
 });
-
-// Tokens de reset en memoria { token: { expiry } }
-const resetTokens = new Map();
 
 // ── Leer contraseña actual (siempre desde process.env vigente) ────────────────
 function getAdminPass() { return process.env.ADMIN_PASS || 'riego2024'; }
@@ -110,9 +108,10 @@ router.post('/recuperar', rateLimit({ windowMs: 60*1000, max: 3,
     return res.json({ ok: true, mensaje: 'Si el correo está registrado, recibirás el enlace de recuperación.' });
   }
 
+  await limpiarTokensExpirados();
   const token  = crypto.randomBytes(32).toString('hex');
   const expiry = Date.now() + 30 * 60 * 1000; // 30 minutos
-  resetTokens.set(token, { expiry });
+  await guardarResetToken(token, expiry);
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const enviado = await enviarResetClave(token, baseUrl);
@@ -125,7 +124,7 @@ router.post('/recuperar', rateLimit({ windowMs: 60*1000, max: 3,
 });
 
 // ── POST /api/auth/reset ──────────────────────────────────────────────────────
-router.post('/reset', (req, res) => {
+router.post('/reset', async (req, res) => {
   const { token, claveNueva } = req.body;
 
   if (!token || !claveNueva)
@@ -134,13 +133,13 @@ router.post('/reset', (req, res) => {
   if (claveNueva.length < 6)
     return res.status(400).json({ error: 'La clave debe tener mínimo 6 caracteres.' });
 
-  const datos = resetTokens.get(token);
+  const datos = await obtenerResetToken(token);
   if (!datos || Date.now() > datos.expiry) {
-    resetTokens.delete(token);
+    await eliminarResetToken(token);
     return res.status(400).json({ error: 'Token inválido o expirado. Solicita uno nuevo.' });
   }
 
-  resetTokens.delete(token);
+  await eliminarResetToken(token);
   actualizarClaveEnv(claveNueva);
   res.json({ ok: true, mensaje: 'Contraseña restablecida. Ya puedes iniciar sesión.' });
 });
