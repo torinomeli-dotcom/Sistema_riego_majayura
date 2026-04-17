@@ -222,17 +222,45 @@ void setup() {
   prefs.end();
   cargarCalibracion();
 
-  WiFi.persistent(true);  // garantiza escritura en NVS antes de reiniciar
+  WiFi.persistent(true);
 
-  wm.setAPCallback([](WiFiManager*) {
-    lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
-  });
-  wm.setBreakAfterConfig(true);  // guarda credenciales aunque la conexión falle
-  wm.setConfigPortalTimeout(180);
-  wm.setConnectTimeout(20);
+  // Intentar con credenciales propias guardadas en NVS (más confiable que WiFiManager)
+  prefs.begin("wifi", true);
+  String savedSSID = prefs.getString("ssid", "");
+  String savedPass = prefs.getString("pass", "");
+  prefs.end();
 
-  Serial.println("[BOOT] Iniciando WiFiManager...");
-  if (wm.autoConnect(WIFI_AP_NAME, WIFI_AP_PASS)) {
+  bool wifiOk = false;
+  if (savedSSID.length() > 0) {
+    Serial.printf("[WiFi] Intentando red guardada: %s\n", savedSSID.c_str());
+    lcdMsg("Conectando...   ", savedSSID.substring(0, 16).c_str());
+    WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+    unsigned long t0 = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) delay(300);
+    wifiOk = (WiFi.status() == WL_CONNECTED);
+    if (!wifiOk) Serial.println("[WiFi] Red guardada falló — abriendo portal");
+  }
+
+  if (!wifiOk) {
+    wm.setAPCallback([](WiFiManager*) {
+      lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
+    });
+    wm.setBreakAfterConfig(true);
+    wm.setConfigPortalTimeout(180);
+    wm.setConnectTimeout(20);
+    Serial.println("[BOOT] Iniciando WiFiManager...");
+    wifiOk = wm.autoConnect(WIFI_AP_NAME, WIFI_AP_PASS);
+    if (wifiOk) {
+      // Guardar en NVS propio para futuros arranques
+      prefs.begin("wifi", false);
+      prefs.putString("ssid", WiFi.SSID());
+      prefs.putString("pass", WiFi.psk());
+      prefs.end();
+      Serial.printf("[WiFi] Credenciales guardadas: %s\n", WiFi.SSID().c_str());
+    }
+  }
+
+  if (wifiOk) {
     Serial.println("[BOOT] WiFi OK");
     wifiConectado = true;
 
@@ -269,6 +297,7 @@ void setup() {
     Serial.println("[WiFi] Sin red -- modo standalone");
     lcdMsg("Sin WiFi        ", "Riego operativo!");
   }
+
 
   Serial.println("[BOOT] Leyendo sensores iniciales...");
 
@@ -672,6 +701,7 @@ void ejecutarItemMenu(int item) {
     case MENU_WIFI_BORRAR:
       lcdMsg("Borrando WiFi...", "Reiniciando...  ");
       delay(1200);
+      prefs.begin("wifi", false); prefs.clear(); prefs.end();
       wm.resetSettings();
       ESP.restart();
       break;

@@ -20,6 +20,12 @@ const urlModule           = require('url');
 const authRoutes = require('./routes/auth');
 const apiRoutes  = require('./routes/api');
 const { initDB, guardarHistorial, obtenerHistorial } = require('./database');
+const { enviarAlertaTanque } = require('../mailer');
+
+// Alerta tanque vacío — máximo 1 correo cada 2 horas
+const INTERVALO_ALERTA_TANQUE = 2 * 60 * 60 * 1000;
+let ultimoEmailTanque = 0;
+let tanqueEstabaLleno = true;
 
 // ── Estado global ────────────────────────────────────────────────
 let ultimoEstado        = null;
@@ -170,6 +176,27 @@ function manejarESP32(ws) {
 
       broadcastDashboard(t);
       console.log(`[ESP32] Telemetría OK — valvula=${t.actuadores?.valvula?.estado} dashboards=${dashboardClients.size}`);
+
+      // Alerta tanque vacío con rate-limit (máx 1 correo cada 2 horas)
+      const tanqueLleno = t.tanque_lleno !== false;
+      if (!tanqueLleno) {
+        const ahora = Date.now();
+        const esRecordatorio = tanqueEstabaLleno === false; // ya estaba vacío antes
+        if (ahora - ultimoEmailTanque >= INTERVALO_ALERTA_TANQUE) {
+          ultimoEmailTanque = ahora;
+          const dashboardUrl = process.env.APP_URL || '';
+          enviarAlertaTanque({ esRecordatorio, dashboardUrl })
+            .then(ok => console.log(`[mailer] Alerta tanque vacío ${ok ? 'enviada' : 'falló'} (recordatorio=${esRecordatorio})`))
+            .catch(e => console.error('[mailer] Error alerta tanque:', e.message));
+        }
+      } else {
+        // Tanque se llenó — resetear para que próxima vez llegue alerta inmediata
+        if (!tanqueEstabaLleno) {
+          ultimoEmailTanque = 0;
+          console.log('[Tanque] Lleno de nuevo — alerta reseteada');
+        }
+      }
+      tanqueEstabaLleno = tanqueLleno;
     } catch (e) {
       console.error('[ESP32] Error parseando mensaje:', e.message);
     }
