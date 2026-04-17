@@ -442,7 +442,10 @@ void procesarMensajeWS(char* payload, size_t length) {
 void procesarComando(const char* cmd, bool estado) {
   if (!cmd || cmd[0] == '\0') return;
   Serial.printf("[CMD] %s -> %s\n", cmd, estado ? "ON" : "OFF");
-  if      (strcmp(cmd, "valvula")   == 0) setValvula(estado, false, estado ? "Nube:ON" : "Nube:OFF");
+  if      (strcmp(cmd, "valvula")   == 0) {
+    if (estado && !tanqueLleno) { Serial.println("[CMD] Valvula bloqueada — tanque vacio"); return; }
+    setValvula(estado, false, estado ? "Nube:ON" : "Nube:OFF");
+  }
   else if (strcmp(cmd, "bombillo1") == 0) setBombillo(1, estado);
   else if (strcmp(cmd, "bombillo2") == 0) setBombillo(2, estado);
   else if (strcmp(cmd, "modo_auto") == 0) {
@@ -636,6 +639,7 @@ void ejecutarItemMenu(int item) {
   switch (item) {
     case MENU_VALVULA:
       if (modoAuto) { lcdMsg("Modo AUTO activo", "Cambia a MANUAL "); delay(1500); dibujarMenu(); return; }
+      if (!valvulaOn && !tanqueLleno) { lcdMsg("Sin agua!       ", "Valvula bloq.   "); delay(1500); dibujarMenu(); return; }
       setValvula(!valvulaOn, false, valvulaOn ? "Menu:OFF" : "Menu:ON");
       break;
     case MENU_BOMBILLO1: setBombillo(1, !bombillo1On); break;
