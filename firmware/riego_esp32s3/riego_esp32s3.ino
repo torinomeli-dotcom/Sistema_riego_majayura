@@ -160,7 +160,8 @@ int           pantallaEstado   = 0;
 #define MENU_VER_IP     4
 #define MENU_SENSORES   5
 #define MENU_RESET_CNT  6
-#define MENU_ITEMS      7
+#define MENU_RESET_WIFI 7
+#define MENU_ITEMS      8
 
 bool          enMenu        = false;
 int           menuCursor    = 0;
@@ -169,7 +170,8 @@ unsigned long tUltimasTecla = 0;
 
 const char* menuNombres[MENU_ITEMS] = {
   "Valvula  ", "Bombill1 ", "Bombill2 ",
-  "ModoAuto ", "Ver IP   ", "Sensores ", "ResetCnt "
+  "ModoAuto ", "Ver IP   ", "Sensores ",
+  "ResetCnt ", "BorrarWiFi"
 };
 
 // Prototipos
@@ -671,6 +673,12 @@ void ejecutarItemMenu(int item) {
       lcdMsg("Contador        ", "reseteado OK    ");
       delay(1000);
       break;
+    case MENU_RESET_WIFI:
+      lcdMsg("Borrando WiFi...", "Reiniciando...  ");
+      delay(1500);
+      wm.resetSettings();   // borra credenciales WiFi de NVS
+      ESP.restart();        // reinicia para abrir el portal
+      return;               // no continua
   }
   dibujarMenu();
   transmitirEstado();
