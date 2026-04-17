@@ -30,7 +30,7 @@
 // =====================================================================
 // CONFIGURACION
 // =====================================================================
-#define WIFI_AP_NAME  "Riego_IoT"
+#define WIFI_AP_NAME  "Riego_Mi_Majayura"
 #define WIFI_AP_PASS  ""
 #define ESP32_KEY     "riego_esp32_2024"
 #define WS_HOST       "riegomimajayura.onrender.com"
@@ -213,7 +213,7 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL);
   lcd.init();
   lcd.backlight();
-  lcdMsg("  RIEGO IOT v5  ", " Majayura,Guajira");
+  lcdMsg(" RIEGO MAJAYURA ", "   La Guajira   ");
   // Sin delay: el LCD ya muestra el mensaje, no hay que esperar
 
   prefs.begin("riego", true);
@@ -221,10 +221,13 @@ void setup() {
   prefs.end();
   cargarCalibracion();
 
+  WiFi.persistent(true);  // garantiza escritura en NVS antes de reiniciar
+
   wm.setAPCallback([](WiFiManager*) {
     lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
   });
-  wm.setConfigPortalTimeout(120);
+  wm.setBreakAfterConfig(true);  // guarda credenciales aunque la conexión falle
+  wm.setConfigPortalTimeout(180);
   wm.setConnectTimeout(20);
 
   Serial.println("[BOOT] Iniciando WiFiManager...");
