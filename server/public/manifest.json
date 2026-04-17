@@ -1,0 +1,24 @@
+{
+  "name": "Riego Mi Majayura",
+  "short_name": "Riego",
+  "description": "Sistema de riego automatizado — Majayura, La Guajira",
+  "start_url": "/login.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1117",
+  "theme_color": "#58a6ff",
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
