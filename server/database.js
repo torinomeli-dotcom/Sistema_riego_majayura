@@ -28,7 +28,32 @@ async function initDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS config (
+      clave TEXT PRIMARY KEY,
+      valor TEXT NOT NULL
+    )
+  `);
+  // Valores por defecto solo si no existen
+  await pool.query(`
+    INSERT INTO config (clave, valor) VALUES
+      ('admin_user', 'admin'),
+      ('admin_pass', 'riego2024')
+    ON CONFLICT (clave) DO NOTHING
+  `);
   console.log('[DB] Tablas listas');
+}
+
+async function getConfig(clave) {
+  const res = await pool.query('SELECT valor FROM config WHERE clave = $1', [clave]);
+  return res.rows[0]?.valor || null;
+}
+
+async function setConfig(clave, valor) {
+  await pool.query(
+    'INSERT INTO config (clave, valor) VALUES ($1, $2) ON CONFLICT (clave) DO UPDATE SET valor = $2',
+    [clave, valor]
+  );
 }
 
 async function guardarResetToken(token, expiry) {
@@ -75,4 +100,4 @@ async function obtenerHistorialDesde(desdeTs, maxRows = 5000) {
   return res.rows;
 }
 
-module.exports = { pool, initDB, guardarHistorial, obtenerHistorial, obtenerHistorialDesde, guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados };
+module.exports = { pool, initDB, guardarHistorial, obtenerHistorial, obtenerHistorialDesde, guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados, getConfig, setConfig };

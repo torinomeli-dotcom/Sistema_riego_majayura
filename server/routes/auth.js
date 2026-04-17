@@ -1,33 +1,18 @@
 const express   = require('express');
 const jwt       = require('jsonwebtoken');
-const bcrypt    = require('bcryptjs');
 const crypto    = require('crypto');
-const fs        = require('fs');
-const path      = require('path');
 const rateLimit = require('express-rate-limit');
 const { enviarResetClave } = require('../mailer');
-const { guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados } = require('../database');
+const {
+  guardarResetToken, obtenerResetToken, eliminarResetToken, limpiarTokensExpirados,
+  getConfig, setConfig
+} = require('../database');
 
 const router = express.Router();
 
-// Máximo 5 intentos de login por minuto por IP
 const loginLimit = rateLimit({ windowMs: 60*1000, max: 5,
   message: { error: 'Demasiados intentos. Espera 1 minuto.' }
 });
-
-// ── Leer contraseña actual (siempre desde process.env vigente) ────────────────
-function getAdminPass() { return process.env.ADMIN_PASS || 'riego2024'; }
-function getAdminUser() { return process.env.ADMIN_USER || 'admin'; }
-
-// ── Guardar nueva contraseña en .env ─────────────────────────────────────────
-function actualizarClaveEnv(nuevaClave) {
-  const envPath = path.join(__dirname, '../.env');
-  let contenido = fs.readFileSync(envPath, 'utf8');
-  contenido = contenido.replace(/^ADMIN_PASS=.*/m, `ADMIN_PASS=${nuevaClave}`);
-  fs.writeFileSync(envPath, contenido, 'utf8');
-  process.env.ADMIN_PASS = nuevaClave;
-  console.log('[AUTH] Contraseña actualizada en .env');
-}
 
 // ── Middleware verificar JWT ──────────────────────────────────────────────────
 function requireAuth(req, res, next) {
@@ -47,24 +32,24 @@ router.post('/login', loginLimit, async (req, res) => {
   if (!usuario || !password)
     return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
 
-  if (usuario !== getAdminUser()) {
-    await new Promise(r => setTimeout(r, 300));
-    return res.status(401).json({ error: 'Credenciales incorrectas.' });
-  }
+  const [adminUser, adminPass] = await Promise.all([
+    getConfig('admin_user'),
+    getConfig('admin_pass')
+  ]);
 
-  if (password !== getAdminPass()) {
-    await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 300));
+
+  if (usuario !== adminUser || password !== adminPass)
     return res.status(401).json({ error: 'Credenciales incorrectas.' });
-  }
 
   const token = jwt.sign(
-    { sub: getAdminUser(), rol: 'admin', sistema: 'riego-majayura', iat: Math.floor(Date.now()/1000) },
+    { sub: adminUser, rol: 'admin', sistema: 'riego-majayura', iat: Math.floor(Date.now()/1000) },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 
-  console.log(`[AUTH] Login exitoso — usuario: ${getAdminUser()}`);
-  res.json({ ok: true, token, usuario: getAdminUser(), expira: '24h', mensaje: 'Bienvenido al Sistema de Riego Majayura' });
+  console.log(`[AUTH] Login exitoso — usuario: ${adminUser}`);
+  res.json({ ok: true, token, usuario: adminUser, expira: '24h', mensaje: 'Bienvenido al Sistema de Riego Majayura' });
 });
 
 // ── POST /api/auth/verificar ──────────────────────────────────────────────────
@@ -89,10 +74,12 @@ router.post('/cambiar-clave', requireAuth, async (req, res) => {
   if (claveNueva.length < 6)
     return res.status(400).json({ error: 'La nueva clave debe tener mínimo 6 caracteres.' });
 
-  if (claveActual !== getAdminPass())
+  const adminPass = await getConfig('admin_pass');
+  if (claveActual !== adminPass)
     return res.status(401).json({ error: 'La clave actual es incorrecta.' });
 
-  actualizarClaveEnv(claveNueva);
+  await setConfig('admin_pass', claveNueva);
+  console.log('[AUTH] Contraseña actualizada en DB');
   res.json({ ok: true, mensaje: 'Contraseña actualizada correctamente.' });
 });
 
@@ -103,22 +90,19 @@ router.post('/recuperar', rateLimit({ windowMs: 60*1000, max: 3,
   const { correo } = req.body;
   const adminEmail = process.env.ADMIN_EMAIL || '';
 
-  // Siempre responder igual para no revelar información
-  if (!correo || correo.toLowerCase() !== adminEmail.toLowerCase()) {
+  if (!correo || correo.toLowerCase() !== adminEmail.toLowerCase())
     return res.json({ ok: true, mensaje: 'Si el correo está registrado, recibirás el enlace de recuperación.' });
-  }
 
   await limpiarTokensExpirados();
   const token  = crypto.randomBytes(32).toString('hex');
-  const expiry = Date.now() + 30 * 60 * 1000; // 30 minutos
+  const expiry = Date.now() + 30 * 60 * 1000;
   await guardarResetToken(token, expiry);
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const enviado = await enviarResetClave(token, baseUrl);
 
-  if (!enviado) {
-    return res.status(500).json({ error: 'No se pudo enviar el correo. Verifica RESEND_API_KEY y ADMIN_EMAIL en las variables de entorno.' });
-  }
+  if (!enviado)
+    return res.status(500).json({ error: 'No se pudo enviar el correo. Verifica RESEND_API_KEY y ADMIN_EMAIL.' });
 
   res.json({ ok: true, mensaje: 'Si el correo está registrado, recibirás el enlace de recuperación.' });
 });
@@ -140,7 +124,8 @@ router.post('/reset', async (req, res) => {
   }
 
   await eliminarResetToken(token);
-  actualizarClaveEnv(claveNueva);
+  await setConfig('admin_pass', claveNueva);
+  console.log('[AUTH] Contraseña restablecida via reset token');
   res.json({ ok: true, mensaje: 'Contraseña restablecida. Ya puedes iniciar sesión.' });
 });
 
