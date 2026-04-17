@@ -232,7 +232,7 @@ function actualizarUI(data) {
 
     // Botones (deshabilitados en AUTO o si tanque vacío)
     const modoAuto = modo === 'AUTO';
-    const tanqueVacio = ultimoEstado?.tanque_lleno === false;
+    const tanqueVacio = estadoActual?.tanque_lleno === false;
     document.getElementById('btnAbrir').disabled  = modoAuto || tanqueVacio;
     document.getElementById('btnCerrar').disabled = modoAuto;
     document.getElementById('btnB1On').disabled   = modoAuto;
