@@ -29,6 +29,16 @@ let comandosPendientes  = [];     // Cola cuando ESP32 se reconecta
 
 const dashboardClients = new Set();  // WebSocket de navegadores
 
+// Watchdog: si el ESP32 no envía telemetría en 90s, marcar offline
+setInterval(() => {
+  if (esp32WS && Date.now() - esp32UltimoContacto > 90000) {
+    console.warn('[ESP32] Sin telemetría en 90s — marcando offline');
+    try { esp32WS.terminate(); } catch (_) {}
+    esp32WS = null;
+    broadcastDashboard({ tipo: 'esp32_status', conectado: false });
+  }
+}, 30000);
+
 // ── App Express ──────────────────────────────────────────────────
 const app = express();
 

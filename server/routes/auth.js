@@ -102,25 +102,27 @@ router.post('/cambiar-clave', requireAuth, async (req, res) => {
 router.post('/recuperar', rateLimit({ windowMs: 60*1000, max: 3,
   message: { error: 'Demasiadas solicitudes. Espera 1 minuto.' }
 }), async (req, res) => {
-  const { usuario } = req.body;
+  const { correo } = req.body;
+  const adminEmail = process.env.ADMIN_EMAIL || '';
 
-  // Siempre responder OK para no revelar si el usuario existe
-  if (usuario !== getAdminUser()) {
-    return res.json({ ok: true, mensaje: 'Si el usuario existe, recibirás un correo.' });
+  // Siempre responder igual para no revelar información
+  if (!correo || correo.toLowerCase() !== adminEmail.toLowerCase()) {
+    return res.json({ ok: true, mensaje: 'Si el correo está registrado, recibirás el enlace de recuperación.' });
   }
 
   const token  = crypto.randomBytes(32).toString('hex');
   const expiry = Date.now() + 30 * 60 * 1000; // 30 minutos
   resetTokens.set(token, { expiry });
 
-  const host = req.get('host') || 'localhost:3000';
-  const enviado = await enviarResetClave(token, host);
+  const proto   = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const baseUrl = `${proto}://${req.get('host')}`;
+  const enviado = await enviarResetClave(token, baseUrl);
 
   if (!enviado) {
-    return res.status(500).json({ error: 'No se pudo enviar el correo. Verifica RESEND_API_KEY y ADMIN_EMAIL en .env' });
+    return res.status(500).json({ error: 'No se pudo enviar el correo. Verifica RESEND_API_KEY y ADMIN_EMAIL en las variables de entorno.' });
   }
 
-  res.json({ ok: true, mensaje: 'Si el usuario existe, recibirás un correo.' });
+  res.json({ ok: true, mensaje: 'Si el correo está registrado, recibirás el enlace de recuperación.' });
 });
 
 // ── POST /api/auth/reset ──────────────────────────────────────────────────────

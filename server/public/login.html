@@ -220,8 +220,8 @@
 
     <!-- Panel recuperar contraseña -->
     <div id="panelRecuperar" style="display:none;margin-top:1.25rem;border-top:1px solid #21262d;padding-top:1.25rem">
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">Ingresa tu usuario y recibirás un correo para restablecer la contraseña.</p>
-      <input type="text" id="usuarioRecuperar" placeholder="Usuario" style="width:100%;background:#0d1117;border:1px solid #21262d;color:var(--text);border-radius:8px;padding:0.55rem 0.85rem;font-size:0.9rem;margin-bottom:0.75rem;outline:none">
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">Ingresa el correo registrado en el sistema y recibirás un enlace para restablecer la contraseña.</p>
+      <input type="email" id="correoRecuperar" placeholder="tucorreo@ejemplo.com" style="width:100%;background:#0d1117;border:1px solid #21262d;color:var(--text);border-radius:8px;padding:0.55rem 0.85rem;font-size:0.9rem;margin-bottom:0.75rem;outline:none">
       <button onclick="enviarRecuperar()" id="btnRecuperar" style="width:100%;padding:0.65rem;background:transparent;border:1px solid var(--green);color:var(--green);font-weight:600;border-radius:8px;cursor:pointer;font-size:0.9rem">
         Enviar correo de recuperación
       </button>
@@ -313,10 +313,10 @@
     }
 
     async function enviarRecuperar() {
-      const usuario = document.getElementById('usuarioRecuperar').value.trim();
-      const btn     = document.getElementById('btnRecuperar');
-      const msg     = document.getElementById('msgRecuperar');
-      if (!usuario) return;
+      const correo = document.getElementById('correoRecuperar').value.trim();
+      const btn    = document.getElementById('btnRecuperar');
+      const msg    = document.getElementById('msgRecuperar');
+      if (!correo) return;
 
       btn.disabled = true;
       btn.textContent = 'Enviando...';
@@ -326,7 +326,7 @@
         const res  = await fetch('/api/auth/recuperar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario })
+          body: JSON.stringify({ correo })
         });
         const data = await res.json();
         msg.style.display = 'block';

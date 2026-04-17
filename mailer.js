@@ -52,8 +52,8 @@ async function _enviar({ to, asunto, html, texto }) {
 }
 
 // ── RECUPERAR CONTRASEÑA ──────────────────────────────────────────────────────
-async function enviarResetClave(token, host) {
-  const enlace = `http://${host}/reset.html?token=${token}`;
+async function enviarResetClave(token, baseUrl) {
+  const enlace = `${baseUrl}/reset.html?token=${token}`;
   return _enviar({
     asunto: '[Riego IoT] Recuperar contraseña',
     html: `
