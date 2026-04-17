@@ -223,13 +223,10 @@ void setup() {
   prefs.end();
   cargarCalibracion();
 
-  WiFi.persistent(true);  // garantiza escritura en NVS antes de reiniciar
-
   wm.setAPCallback([](WiFiManager*) {
     lcdMsg("Config WiFi:    ", "Abre 192.168.4.1");
   });
-  wm.setBreakAfterConfig(true);  // guarda credenciales aunque la conexión falle
-  wm.setConfigPortalTimeout(180);
+  wm.setConfigPortalTimeout(120);
   wm.setConnectTimeout(20);
 
   Serial.println("[BOOT] Iniciando WiFiManager...");
@@ -551,10 +548,8 @@ void controlAutoBombillos() {
 // =====================================================================
 void setValvula(bool on, bool porAuto, const char* motivo) {
   if (on && !tanqueLleno) {
-    // Tanque vacío — bloquear apertura sin importar el modo
     strncpy(motivoRiego, "Tanque vacio!", sizeof(motivoRiego) - 1);
     Serial.println("[VALVULA] Bloqueada — tanque vacio");
-    transmitirEstado();  // notificar dashboard del rechazo
     return;
   }
   valvulaOn = on;
