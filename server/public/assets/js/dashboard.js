@@ -981,79 +981,27 @@ function tiempoRelativo(ts) {
   return Math.floor(diff / 60) + ' min';
 }
 
-// ── CARRUSEL DE CULTIVOS ────────────────────────────────────────
-let _carruselKeys = [];
-let _carruselIdx  = 0;
-let _scrollTimer  = null;
-
+// ── SELECTOR DE CULTIVO ─────────────────────────────────────────
 function inicializarCultivos() {
-  const track = document.getElementById('cultivoGrid');
-  if (!track) return;
-  _carruselKeys = Object.keys(CULTIVOS);
-
-  _carruselKeys.forEach((key, i) => {
-    const c = CULTIVOS[key];
+  const grid = document.getElementById('cultivoGrid');
+  if (!grid) return;
+  Object.entries(CULTIVOS).forEach(([key, c]) => {
     const btn = document.createElement('button');
     btn.className = 'btn-cultivo';
     btn.id = `cultivo_${key}`;
-    btn.innerHTML = `<span class="ce">${c.emoji}</span><span class="cultivo-nombre-tag">${c.nombre}</span>`;
-    btn.onclick = () => _irACultivo(i);
-    track.appendChild(btn);
+    btn.innerHTML = `<span class="ce">${c.emoji}</span>${c.nombre}`;
+    btn.onclick = () => seleccionarCultivo(key);
+    grid.appendChild(btn);
   });
-
-  if (typeof twemoji !== 'undefined') twemoji.parse(track, { folder: 'svg', ext: '.svg' });
-
-  // Flechas
-  document.getElementById('carruselPrev').onclick = () => _irACultivo(_carruselIdx - 1);
-  document.getElementById('carruselNext').onclick = () => _irACultivo(_carruselIdx + 1);
-
-  // Detectar cultivo central al deslizar
-  track.addEventListener('scroll', () => {
-    clearTimeout(_scrollTimer);
-    _scrollTimer = setTimeout(_detectarCentro, 120);
-  }, { passive: true });
-
-  // Mostrar el primero por defecto
-  setTimeout(() => _irACultivo(0), 80);
+  if (typeof twemoji !== 'undefined') twemoji.parse(grid, { folder: 'svg', ext: '.svg' });
 }
 
-function _irACultivo(idx) {
-  const track = document.getElementById('cultivoGrid');
-  if (!track) return;
-  _carruselIdx = Math.max(0, Math.min(idx, _carruselKeys.length - 1));
-  const items = track.querySelectorAll('.btn-cultivo');
-  const target = items[_carruselIdx];
-  if (!target) return;
-
-  // Scroll suave para centrar
-  const offset = target.offsetLeft - track.clientWidth / 2 + target.offsetWidth / 2;
-  track.scrollTo({ left: offset, behavior: 'smooth' });
-  _mostrarInfoCultivo(_carruselKeys[_carruselIdx]);
-}
-
-function _detectarCentro() {
-  const track = document.getElementById('cultivoGrid');
-  if (!track) return;
-  const centro = track.scrollLeft + track.clientWidth / 2;
-  const items = track.querySelectorAll('.btn-cultivo');
-  let mejor = 0, menorDist = Infinity;
-  items.forEach((el, i) => {
-    const dist = Math.abs(el.offsetLeft + el.offsetWidth / 2 - centro);
-    if (dist < menorDist) { menorDist = dist; mejor = i; }
-  });
-  if (mejor !== _carruselIdx) {
-    _carruselIdx = mejor;
-    _mostrarInfoCultivo(_carruselKeys[_carruselIdx]);
-  }
-}
-
-function _mostrarInfoCultivo(key) {
+function seleccionarCultivo(key) {
   cultivoSeleccionado = key;
   const c = CULTIVOS[key];
 
   document.querySelectorAll('.btn-cultivo').forEach(b => b.classList.remove('activo'));
-  const btnActivo = document.getElementById(`cultivo_${key}`);
-  if (btnActivo) btnActivo.classList.add('activo');
+  document.getElementById(`cultivo_${key}`).classList.add('activo');
 
   document.getElementById('cultivoEmoji').textContent  = c.emoji;
   if (typeof twemoji !== 'undefined') twemoji.parse(document.getElementById('cultivoEmoji'), { folder: 'svg', ext: '.svg' });
@@ -1084,16 +1032,15 @@ function _mostrarInfoCultivo(key) {
     </div>`;
 
   document.getElementById('cultivoInfo').style.display = 'block';
-  document.getElementById('cultivoLabel').textContent  = `Viendo: ${c.nombre}`;
+  document.getElementById('cultivoLabel').textContent  = `Seleccionado: ${c.nombre}`;
 }
-
-function seleccionarCultivo(key) { _mostrarInfoCultivo(key); }
 
 function marcarCultivoActivo(clave) {
   if (!clave || !CULTIVOS[clave]) return;
-  const idx = _carruselKeys.indexOf(clave);
-  if (idx >= 0) _irACultivo(idx);
-  document.getElementById('cultivoLabel').textContent = `Activo en ESP32: ${CULTIVOS[clave].nombre}`;
+  document.querySelectorAll('.btn-cultivo').forEach(b => b.classList.remove('activo'));
+  const btn = document.getElementById(`cultivo_${clave}`);
+  if (btn) btn.classList.add('activo');
+  document.getElementById('cultivoLabel').textContent = `Activo: ${CULTIVOS[clave].nombre}`;
 }
 
 window.aplicarCultivo = async () => {
