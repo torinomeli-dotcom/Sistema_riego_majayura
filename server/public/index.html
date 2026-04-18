@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/assets/icons/icon.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/dashboard.css?v=6.8">
+  <link rel="stylesheet" href="assets/css/dashboard.css?v=6.9">
   <style>body{visibility:hidden}</style>
 </head>
 <body>
@@ -311,37 +311,14 @@
     ⚠ ALERTA — Encharcamiento detectado en columna IZQUIERDA. Revisar plantas lado izquierdo.
   </div>
 
-  <!-- ── SENSORES ─────────────────────────────────────────────── -->
+  <!-- ── SENSORES MAPA ──────────────────────────────────────────── -->
   <div class="card-sensores mb-4">
     <div class="sensores-header">
-      <span>🌡 HUMEDAD DEL SUELO</span>
-      <span class="sensores-sub" id="sensorSub">Actualización cada 30 seg</span>
+      <span>🗺 MAPA DE CAMPO</span>
+      <span class="sensores-sub" id="sensorSub">Toca un sensor para ver detalles</span>
     </div>
-
-    <!-- IZQ -->
-    <div class="zona-label">
-      <span class="zona-badge zona-izq">IZQ</span>
-      Columna Izquierda
-    </div>
-    <div class="row g-2 mb-3" id="sensoresIzq">
-      <!-- Generado por JS -->
-    </div>
-
-    <!-- CTR -->
-    <div class="zona-label">
-      <span class="zona-badge zona-ctr">CTR</span>
-      Columna Central
-    </div>
-    <div class="row g-2 mb-3" id="sensoresCtr">
-    </div>
-
-    <!-- DER -->
-    <div class="zona-label">
-      <span class="zona-badge zona-der">DER</span>
-      Columna Derecha
-    </div>
-    <div class="row g-2 mb-3" id="sensoresDer">
-    </div>
+    <div class="campo-mapa" id="campoMapa"><!-- generado por JS --></div>
+    <div class="sensor-detalle" id="sensorDetalle" style="display:none"></div>
   </div>
 
   <!-- ── HISTORIAL ─────────────────────────────────────────────── -->
@@ -363,7 +340,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
-<script src="assets/js/dashboard.js?v=6.7"></script>
+<script src="assets/js/dashboard.js?v=6.8"></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');

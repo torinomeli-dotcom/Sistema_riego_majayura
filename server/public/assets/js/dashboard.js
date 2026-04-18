@@ -111,36 +111,105 @@ let esp32Online     = false;   // estado real del ESP32 vía WebSocket
 let otaEnProgreso   = false;   // true mientras ESP32 está actualizando firmware
 let otaTimeout      = null;    // timer de watchdog OTA
 
-// ── Inicializar tarjetas de sensores ────────────────────────────
+// ── Mapa de campo ───────────────────────────────────────────────
+let sensorSeleccionado = null;
+
+const ZONA_INFO = {
+  IZQ: { label: 'Columna Izquierda', cls: 'zona-izq' },
+  CTR: { label: 'Columna Central',   cls: 'zona-ctr' },
+  DER: { label: 'Columna Derecha',   cls: 'zona-der' },
+};
+
+function pinEmoji(estado) {
+  if (estado === 'SECO')        return '🔴';
+  if (estado === 'ENCHARCADO')  return '⚠️';
+  if (estado === 'HUMEDO')      return '💧';
+  return '⚪';
+}
+
 function inicializarSensores() {
-  const grupos = { IZQ: 'sensoresIzq', CTR: 'sensoresCtr', DER: 'sensoresDer' };
+  const mapa = document.getElementById('campoMapa');
+  mapa.innerHTML = '';
 
-  SENSORES_CONFIG.forEach(cfg => {
-    const contenedor = document.getElementById(grupos[cfg.zona]);
-    if (!contenedor) return;
-
+  ['IZQ','CTR','DER'].forEach(zona => {
+    const sensores = SENSORES_CONFIG.filter(s => s.zona === zona);
     const col = document.createElement('div');
-    col.className = 'col-12 col-sm-6 col-lg-4';
-    col.innerHTML = `
-      <div class="sensor-card" id="card_${cfg.id}">
-        <div class="sensor-top">
-          <div>
-            <div class="sensor-nombre">${cfg.planta}</div>
-          </div>
-          <span class="badge-estado badge-HUMEDO" id="badge_${cfg.id}">HÚMEDO</span>
-        </div>
-        <div class="sensor-barra-wrap">
-          <div class="sensor-barra-fill fill-humedo" id="barra_${cfg.id}" style="width:50%"></div>
-        </div>
-        <div class="sensor-valores">
-          <span class="sensor-pct pct-humedo" id="pct_${cfg.id}">50%</span>
-          <span class="sensor-adc" id="adc_${cfg.id}">ADC ---</span>
-        </div>
-        <div class="sensor-tiempo" id="tiempo_${cfg.id}">--</div>
-      </div>`;
-    contenedor.appendChild(col);
+    col.className = 'campo-zona';
+    col.innerHTML = `<div class="campo-zona-label"><span class="zona-badge ${ZONA_INFO[zona].cls}">${zona}</span><span>${ZONA_INFO[zona].label}</span></div>`;
+
+    const pins = document.createElement('div');
+    pins.className = 'campo-pins';
+
+    sensores.forEach(cfg => {
+      const pin = document.createElement('button');
+      pin.className = 'sensor-pin';
+      pin.id = `pin_${cfg.id}`;
+      pin.innerHTML = `
+        <span class="pin-emoji" id="pinemoji_${cfg.id}">⚪</span>
+        <span class="pin-label">${cfg.id}</span>
+        <span class="pin-pct" id="pinpct_${cfg.id}">--%</span>`;
+      pin.onclick = () => abrirDetalleSensor(cfg.id);
+      pins.appendChild(pin);
+    });
+
+    col.appendChild(pins);
+    mapa.appendChild(col);
   });
 }
+
+function abrirDetalleSensor(id) {
+  const panel = document.getElementById('sensorDetalle');
+  const cfg   = SENSORES_CONFIG.find(s => s.id === id);
+  if (!cfg) return;
+
+  // Marcar pin activo
+  document.querySelectorAll('.sensor-pin').forEach(p => p.classList.remove('activo'));
+  document.getElementById(`pin_${id}`)?.classList.add('activo');
+  sensorSeleccionado = id;
+
+  const estado = document.getElementById(`pinemoji_${id}`)?.dataset.estado || '---';
+  const pct    = document.getElementById(`pinpct_${id}`)?.textContent || '--%';
+  const adc    = document.getElementById(`pinadc_${id}`)?.value       || '---';
+  const tiempo = document.getElementById(`pintiempo_${id}`)?.value    || '--';
+
+  const labels = { HUMEDO: 'HÚMEDO', SECO: 'SECO', ENCHARCADO: '⚠ ENCHARCADO' };
+  const estadoLabel = labels[estado] || estado;
+  const cls = estado === 'SECO' ? 'seco' : estado === 'ENCHARCADO' ? 'encharcado' : 'humedo';
+
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="detalle-header">
+      <div>
+        <span class="detalle-emoji">${pinEmoji(estado)}</span>
+        <span class="detalle-nombre">${cfg.id} — ${ZONA_INFO[cfg.zona].label}</span>
+      </div>
+      <button onclick="cerrarDetalleSensor()" class="detalle-cerrar">✕</button>
+    </div>
+    <div class="detalle-body">
+      <div class="detalle-item">
+        <div class="detalle-item-label">Humedad</div>
+        <div class="detalle-item-val pct-${cls}">${pct}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-item-label">Estado</div>
+        <div class="detalle-item-val badge-estado badge-${estado}" style="display:inline-block">${estadoLabel}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-item-label">Valor ADC</div>
+        <div class="detalle-item-val" id="detalleAdc">${adc}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-item-label">Última lectura</div>
+        <div class="detalle-item-val" id="detalleTiempo">${tiempo}</div>
+      </div>
+    </div>`;
+}
+
+window.cerrarDetalleSensor = () => {
+  document.getElementById('sensorDetalle').style.display = 'none';
+  document.querySelectorAll('.sensor-pin').forEach(p => p.classList.remove('activo'));
+  sensorSeleccionado = null;
+};
 
 // ── Actualizar UI con datos del ESP32 ───────────────────────────
 function actualizarUI(data) {
@@ -152,52 +221,58 @@ function actualizarUI(data) {
   document.getElementById('ultimaActualizacion').textContent =
     'Actualizado: ' + ahora.toLocaleTimeString('es-CO');
 
-  // ── Sensores ───────────────────────────────────────────────
+  // ── Sensores (mapa) ────────────────────────────────────────
   const s = data.sensores || {};
   SENSORES_CONFIG.forEach(cfg => {
     const info = s[cfg.id];
     if (!info) return;
 
-    const card   = document.getElementById(`card_${cfg.id}`);
-    const badge  = document.getElementById(`badge_${cfg.id}`);
-    const barra  = document.getElementById(`barra_${cfg.id}`);
-    const pct    = document.getElementById(`pct_${cfg.id}`);
-    const adcEl  = document.getElementById(`adc_${cfg.id}`);
-    const tiempo = document.getElementById(`tiempo_${cfg.id}`);
-
     const estado = info.estado || 'HUMEDO';
     const humPct = info.pct    || 0;
     const adc    = info.adc    || 0;
+    const tiempoStr = 'Hace ' + tiempoRelativo(data.serverTimestamp || Date.now());
 
-    // Card clases de estado
-    card.classList.remove('estado-seco', 'estado-encharcado');
-    if (estado === 'SECO')        card.classList.add('estado-seco');
-    if (estado === 'ENCHARCADO')  card.classList.add('estado-encharcado');
+    // Actualizar pin
+    const pin      = document.getElementById(`pin_${cfg.id}`);
+    const emojiEl  = document.getElementById(`pinemoji_${cfg.id}`);
+    const pctEl    = document.getElementById(`pinpct_${cfg.id}`);
 
-    // Badge
-    badge.className = `badge-estado badge-${estado}`;
-    const labels = { HUMEDO: 'HÚMEDO', SECO: 'SECO', ENCHARCADO: '⚠ ENCHARCADO' };
-    badge.textContent = labels[estado] || estado;
-
-    // ADC crudo para calibración
-    if (adcEl) adcEl.textContent = `ADC ${adc}`;
-
-    // Barra de humedad
-    barra.style.width = humPct + '%';
-    barra.className = `sensor-barra-fill fill-${estado.toLowerCase()}`;
-
-    // Porcentaje con animación si cambió
-    const pctStr = humPct + '%';
-    if (pct.textContent !== pctStr) {
-      pct.textContent = pctStr;
-      pct.className   = `sensor-pct pct-${estado.toLowerCase()}`;
-      pct.classList.add('changed');
-      setTimeout(() => pct.classList.remove('changed'), 400);
+    if (pin) {
+      pin.classList.remove('pin-seco','pin-humedo','pin-encharcado');
+      pin.classList.add(`pin-${estado.toLowerCase()}`);
     }
+    if (emojiEl) {
+      emojiEl.textContent = pinEmoji(estado);
+      emojiEl.dataset.estado = estado;
+    }
+    if (pctEl) pctEl.textContent = humPct + '%';
 
+    // Guardar ADC y tiempo en campos ocultos para el panel de detalle
+    let adcHidden = document.getElementById(`pinadc_${cfg.id}`);
+    if (!adcHidden) {
+      adcHidden = document.createElement('input');
+      adcHidden.type = 'hidden'; adcHidden.id = `pinadc_${cfg.id}`;
+      document.body.appendChild(adcHidden);
+    }
+    adcHidden.value = `ADC ${adc}`;
 
-    // Tiempo desde última lectura
-    tiempo.textContent = 'Hace ' + tiempoRelativo(data.serverTimestamp || Date.now());
+    let tiempoHidden = document.getElementById(`pintiempo_${cfg.id}`);
+    if (!tiempoHidden) {
+      tiempoHidden = document.createElement('input');
+      tiempoHidden.type = 'hidden'; tiempoHidden.id = `pintiempo_${cfg.id}`;
+      document.body.appendChild(tiempoHidden);
+    }
+    tiempoHidden.value = tiempoStr;
+
+    // Si este sensor está abierto en el panel, actualizar en vivo
+    if (sensorSeleccionado === cfg.id) {
+      const labels = { HUMEDO: 'HÚMEDO', SECO: 'SECO', ENCHARCADO: '⚠ ENCHARCADO' };
+      const cls = estado === 'SECO' ? 'seco' : estado === 'ENCHARCADO' ? 'encharcado' : 'humedo';
+      const adcD  = document.getElementById('detalleAdc');
+      const tD    = document.getElementById('detalleTiempo');
+      if (adcD) adcD.textContent = `ADC ${adc}`;
+      if (tD)   tD.textContent   = tiempoStr;
+    }
   });
 
   // ── VÁLVULA ────────────────────────────────────────────────

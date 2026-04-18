@@ -595,6 +595,167 @@ body {
   50%       { opacity: 0.45; }
 }
 
+/* ── MAPA DE CAMPO ───────────────────────────────────────────── */
+.campo-mapa {
+  display: flex;
+  gap: 0.5rem;
+  background: linear-gradient(160deg,#0d1f0d 0%,#111a11 50%,#0d1117 100%);
+  border: 1px solid rgba(63,185,80,0.2);
+  border-radius: 14px;
+  padding: 1rem 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+.campo-mapa::before {
+  content:'';
+  position:absolute; inset:0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 28px,
+    rgba(63,185,80,0.04) 28px, rgba(63,185,80,0.04) 29px
+  );
+  pointer-events:none;
+}
+
+.campo-zona {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-right: 1px dashed rgba(255,255,255,0.06);
+  padding: 0 0.4rem;
+}
+.campo-zona:last-child { border-right: none; }
+
+.campo-zona-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.64rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+
+.campo-pins {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* Pin de sensor */
+.sensor-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 0.55rem 0.6rem;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.sensor-pin:hover {
+  background: rgba(88,166,255,0.1);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+.sensor-pin.activo {
+  background: rgba(88,166,255,0.15);
+  border-color: var(--blue);
+  box-shadow: 0 0 12px rgba(88,166,255,0.3);
+}
+.sensor-pin.pin-seco {
+  border-color: rgba(255,92,122,0.5);
+  background: rgba(255,92,122,0.08);
+  animation: pulse-seco 2.5s ease-in-out infinite;
+}
+.sensor-pin.pin-encharcado {
+  border-color: rgba(255,159,67,0.5);
+  background: rgba(255,159,67,0.08);
+}
+.sensor-pin.pin-humedo {
+  border-color: rgba(63,185,80,0.4);
+}
+
+.pin-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.pin-label {
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.pin-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green);
+}
+.sensor-pin.pin-seco    .pin-pct { color: var(--red); }
+.sensor-pin.pin-encharcado .pin-pct { color: var(--orange); }
+
+/* Panel de detalle */
+.sensor-detalle {
+  margin-top: 0.75rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.detalle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+.detalle-emoji { font-size: 1.6rem; margin-right: 0.6rem; }
+.detalle-nombre {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.detalle-cerrar {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.detalle-body {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+.detalle-item-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+.detalle-item-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
 /* ── HISTORIAL ───────────────────────────────────────────────── */
 .chart-wrap {
   height: 230px;
