@@ -138,6 +138,12 @@ bool wifiConectado        = false;
 bool wsConectado          = false;
 char motivoRiego[64]      = "Sistema iniciado";
 
+// Horario de riego (guardado en flash)
+// modos: "todo"=24/7 | "dia"=7-18 | "noche"=18-7 | "rango"=inicio-fin
+char          horarioModo[8]   = "todo";
+int           horarioInicio    = 0;
+int           horarioFin       = 23;
+
 // Calibración dinámica por cultivo (guardada en flash)
 int           umbralSeco       = DEF_UMBRAL_SECO;
 int           umbralHumedo     = DEF_UMBRAL_HUMEDO;
@@ -174,6 +180,7 @@ const char* menuNombres[MENU_ITEMS] = {
 };
 
 // Prototipos
+bool        enHorarioRiego();
 void        actualizarFirmwareOTA(const char* url);
 void        guardarCalibracion();
 void        cargarCalibracion();
@@ -221,6 +228,14 @@ void setup() {
   modoAuto = prefs.getBool("modoAuto", true);
   prefs.end();
   cargarCalibracion();
+
+  prefs.begin("horario", true);
+  prefs.getString("modo", horarioModo, sizeof(horarioModo));
+  horarioInicio = prefs.getInt("inicio", 0);
+  horarioFin    = prefs.getInt("fin",   23);
+  prefs.end();
+  if (strlen(horarioModo) == 0) strlcpy(horarioModo, "todo", sizeof(horarioModo));
+  Serial.printf("[HORARIO] modo:%s %d-%d\n", horarioModo, horarioInicio, horarioFin);
 
   WiFi.persistent(true);
 
@@ -447,6 +462,23 @@ void procesarMensajeWS(char* payload, size_t length) {
     return;
   }
 
+  // Comando especial: horario de riego
+  if (strcmp(cmd, "horario_riego") == 0) {
+    strlcpy(horarioModo, doc["modo"] | "todo", sizeof(horarioModo));
+    horarioInicio = doc["inicio"] | 0;
+    horarioFin    = doc["fin"]    | 23;
+    prefs.begin("horario", false);
+    prefs.putString("modo",  horarioModo);
+    prefs.putInt("inicio",   horarioInicio);
+    prefs.putInt("fin",      horarioFin);
+    prefs.end();
+    char msg[32]; snprintf(msg, sizeof(msg), "Horario:%s", horarioModo);
+    Serial.printf("[HORARIO] modo:%s %d-%d\n", horarioModo, horarioInicio, horarioFin);
+    lcdMsg("Horario riego   ", msg);
+    transmitirEstado();
+    return;
+  }
+
   // Comando especial: calibrar cultivo
   if (strcmp(cmd, "calibrar") == 0) {
     if (doc.containsKey("umbral_seco"))       umbralSeco       = doc["umbral_seco"].as<int>();
@@ -524,7 +556,23 @@ const char* estadoSensor(int adc) {
 // =====================================================================
 // LOGICA DE RIEGO
 // =====================================================================
+bool enHorarioRiego() {
+  if (strcmp(horarioModo, "todo") == 0) return true;
+  if (!ntpOk) return true; // sin NTP no bloqueamos
+  struct tm t;
+  if (!getLocalTime(&t, 0)) return true;
+  int h = t.tm_hour;
+  if (strcmp(horarioModo, "dia")   == 0) return (h >= 7  && h < 18);
+  if (strcmp(horarioModo, "noche") == 0) return (h >= 18 || h < 7);
+  if (strcmp(horarioModo, "rango") == 0) return (h >= horarioInicio && h < horarioFin);
+  return true;
+}
+
 void evaluarRiego() {
+  if (!enHorarioRiego()) {
+    if (valvulaOn) setValvula(false, true, "Fuera horario");
+    return;
+  }
   // Protección: sin agua en tanque no activar válvula
   if (!tanqueLleno) {
     if (valvulaOn) setValvula(false, true, "Tanque vacio!");
@@ -626,6 +674,10 @@ String construirJSON() {
   doc["motivo_riego"]          = motivoRiego;
   if (otaFallo) { doc["ota_fallo"] = true; otaFallo = false; }
   doc["modo_auto"]             = modoAuto;
+  JsonObject hor = doc.createNestedObject("horario");
+  hor["modo"]   = horarioModo;
+  hor["inicio"] = horarioInicio;
+  hor["fin"]    = horarioFin;
 
   JsonObject cal = doc.createNestedObject("calibracion");
   cal["cultivo"]           = cultivoActual;

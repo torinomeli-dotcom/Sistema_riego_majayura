@@ -41,6 +41,7 @@
     </div>
     <button class="btn-tema" id="btnTema" onclick="toggleTema()" title="Cambiar tema">🌙</button>
     <a class="btn-nav" href="/historial.html" style="text-decoration:none">📊 Historial</a>
+    <button class="btn-nav" onclick="abrirModalHorario()">🕐 Horario</button>
     <button class="btn-nav" onclick="abrirModalOTA()">⚡ OTA</button>
     <button class="btn-nav" onclick="abrirModalClave()">🔑 Clave</button>
     <button class="btn-nav" onclick="cerrarSesion()">Salir</button>
@@ -113,6 +114,49 @@
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="cerrarModalClave()">Cancelar</button>
       <button class="btn-modal-ok" id="btnGuardarClave" onclick="guardarClave()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL HORARIO RIEGO ───────────────────────────────────────── -->
+<div class="modal-overlay" id="modalHorario">
+  <div class="modal-box">
+    <div class="modal-title">🕐 Horario de Riego</div>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">Define cuándo puede activarse el riego automático. Útil para ahorrar batería en la noche.</p>
+
+    <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1rem">
+      <label class="horario-opcion" id="hop_todo">
+        <input type="radio" name="horarioModo" value="todo" onchange="onHorarioChange()"> 🔄 Todo el día <small>(24/7 — actual)</small>
+      </label>
+      <label class="horario-opcion" id="hop_dia">
+        <input type="radio" name="horarioModo" value="dia" onchange="onHorarioChange()"> 🌞 Solo de día <small>(7am – 6pm)</small>
+      </label>
+      <label class="horario-opcion" id="hop_noche">
+        <input type="radio" name="horarioModo" value="noche" onchange="onHorarioChange()"> 🌙 Solo de noche <small>(6pm – 7am)</small>
+      </label>
+      <label class="horario-opcion" id="hop_rango">
+        <input type="radio" name="horarioModo" value="rango" onchange="onHorarioChange()"> ⏱ Rango personalizado
+      </label>
+    </div>
+
+    <div id="horarioRangoWrap" style="display:none;background:var(--bg);border-radius:8px;padding:0.75rem;margin-bottom:1rem;display:none">
+      <div style="display:flex;gap:1rem;align-items:center">
+        <div style="flex:1">
+          <label class="modal-label">Desde</label>
+          <input type="number" id="horarioInicio" class="modal-input" min="0" max="23" value="6" placeholder="0-23">
+        </div>
+        <div style="flex:1">
+          <label class="modal-label">Hasta</label>
+          <input type="number" id="horarioFin" class="modal-input" min="0" max="23" value="18" placeholder="0-23">
+        </div>
+      </div>
+      <small style="color:var(--text-muted)">Ejemplo: Desde 6 Hasta 18 → riega entre 6am y 6pm</small>
+    </div>
+
+    <div class="modal-msg" id="msgHorario"></div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="cerrarModalHorario()">Cancelar</button>
+      <button class="btn-modal-ok" id="btnGuardarHorario" onclick="guardarHorario()">Aplicar al sistema</button>
     </div>
   </div>
 </div>

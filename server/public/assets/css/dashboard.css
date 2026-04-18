@@ -1249,3 +1249,19 @@ body {
 #dashboardContent.esp32-offline .badge-offline-estado {
   display: inline-block;
 }
+
+/* ── Horario de riego ── */
+.horario-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.horario-opcion:hover { border-color: var(--accent); background: rgba(88,166,255,0.05); }
+.horario-opcion input { accent-color: var(--accent); width:16px; height:16px; cursor:pointer; }
+.horario-opcion small { color: var(--text-muted); font-size: 0.75rem; }

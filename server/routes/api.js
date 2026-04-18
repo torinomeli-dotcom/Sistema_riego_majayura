@@ -52,7 +52,7 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
             umbral_seco, umbral_humedo, umbral_encharcado,
             min_riego_ms, max_riego_ms, cultivo } = req.body;
 
-    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar', 'ota_update'];
+    const comandosValidos = ['valvula', 'bombillo1', 'bombillo2', 'modo_auto', 'ping', 'calibrar', 'ota_update', 'horario_riego'];
     if (!cmd || !comandosValidos.includes(cmd)) {
       return res.status(400).json({ error: `Comando inválido.` });
     }
@@ -76,6 +76,10 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
         return res.status(403).json({ error: 'Contraseña de autorización incorrecta.' });
       }
       payload.url = url;
+    } else if (cmd === 'horario_riego') {
+      payload.modo   = String(req.body.modo   || 'todo').slice(0, 10);
+      payload.inicio = Number(req.body.inicio ?? 0);
+      payload.fin    = Number(req.body.fin    ?? 23);
     } else {
       if (estado !== undefined) payload.estado = !!estado;
       if (auto   !== undefined) payload.estado  = !!auto;

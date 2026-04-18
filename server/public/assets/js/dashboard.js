@@ -1002,6 +1002,52 @@ function marcarCultivoActivo(clave) {
   document.getElementById('cultivoLabel').textContent = `Activo: ${CULTIVOS[clave].nombre}`;
 }
 
+// ── HORARIO DE RIEGO ────────────────────────────────────────────
+window.abrirModalHorario = () => {
+  const modo = localStorage.getItem('horarioModo') || 'todo';
+  const ini  = localStorage.getItem('horarioInicio') || '6';
+  const fin  = localStorage.getItem('horarioFin')    || '18';
+  const radio = document.querySelector(`input[name="horarioModo"][value="${modo}"]`);
+  if (radio) radio.checked = true;
+  document.getElementById('horarioInicio').value = ini;
+  document.getElementById('horarioFin').value    = fin;
+  document.getElementById('horarioRangoWrap').style.display = modo === 'rango' ? 'block' : 'none';
+  document.getElementById('msgHorario').textContent = '';
+  document.getElementById('modalHorario').classList.add('open');
+};
+
+window.cerrarModalHorario = () => document.getElementById('modalHorario').classList.remove('open');
+
+window.onHorarioChange = () => {
+  const modo = document.querySelector('input[name="horarioModo"]:checked')?.value;
+  document.getElementById('horarioRangoWrap').style.display = modo === 'rango' ? 'block' : 'none';
+};
+
+window.guardarHorario = async () => {
+  const modo = document.querySelector('input[name="horarioModo"]:checked')?.value;
+  if (!modo) return;
+  const inicio = parseInt(document.getElementById('horarioInicio').value);
+  const fin    = parseInt(document.getElementById('horarioFin').value);
+  if (modo === 'rango' && (isNaN(inicio) || isNaN(fin) || inicio < 0 || fin > 23 || inicio >= fin)) {
+    document.getElementById('msgHorario').textContent = 'Rango inválido. Desde debe ser menor que Hasta (0-23).';
+    return;
+  }
+  const btn = document.getElementById('btnGuardarHorario');
+  btn.disabled = true; btn.textContent = 'Aplicando...';
+  const ok = await enviarComando({ cmd: 'horario_riego', modo, inicio, fin });
+  if (ok) {
+    localStorage.setItem('horarioModo', modo);
+    localStorage.setItem('horarioInicio', inicio);
+    localStorage.setItem('horarioFin', fin);
+    cerrarModalHorario();
+    const etiquetas = { todo: '24/7', dia: 'Solo día', noche: 'Solo noche', rango: `${inicio}h–${fin}h` };
+    mostrarToast(`Horario aplicado: ${etiquetas[modo]}`, 'success');
+  } else {
+    document.getElementById('msgHorario').textContent = 'Error al enviar al ESP32. Verifica conexión.';
+  }
+  btn.disabled = false; btn.textContent = 'Aplicar al sistema';
+};
+
 // ── INICIO ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   inicializarSensores();
