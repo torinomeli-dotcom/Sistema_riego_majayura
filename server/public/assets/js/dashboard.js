@@ -101,6 +101,7 @@ const CULTIVOS = {
 };
 
 let cultivoSeleccionado = null;
+let cultivoAplicado     = null;
 
 // ── Estado local ────────────────────────────────────────────────
 let estadoActual    = null;
@@ -992,10 +993,15 @@ function inicializarCultivos() {
     btn.innerHTML = `<span class="ce">${c.emoji}</span>${c.nombre}`;
     btn.onclick = () => {
       if (cultivoSeleccionado === key) {
-        cultivoSeleccionado = null;
-        btn.classList.remove('activo');
+        cultivoSeleccionado = cultivoAplicado;
         document.getElementById('cultivoInfo').style.display = 'none';
-        document.getElementById('cultivoLabel').textContent  = 'Selecciona para ajustar parámetros automáticamente';
+        document.querySelectorAll('.btn-cultivo').forEach(b => b.classList.remove('activo'));
+        if (cultivoAplicado) {
+          document.getElementById(`cultivo_${cultivoAplicado}`)?.classList.add('activo');
+          document.getElementById('cultivoLabel').textContent = `Activo: ${CULTIVOS[cultivoAplicado].nombre}`;
+        } else {
+          document.getElementById('cultivoLabel').textContent = 'Selecciona para ajustar parámetros automáticamente';
+        }
       } else {
         seleccionarCultivo(key);
       }
@@ -1073,6 +1079,7 @@ window.aplicarCultivo = async () => {
       })
     });
     if (res.ok) {
+      cultivoAplicado = cultivoSeleccionado;
       mostrarToast(`✅ Cultivo "${c.nombre}" aplicado al sistema`, 'success');
       btn.disabled = false;
       btn.textContent = 'Aplicar parámetros al sistema';
