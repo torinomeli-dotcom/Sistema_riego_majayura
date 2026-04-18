@@ -10,8 +10,53 @@ const {
 
 const router = express.Router();
 
-const loginLimit = rateLimit({ windowMs: 60*1000, max: 5,
-  message: { error: 'Demasiados intentos. Espera 1 minuto.' }
+// ── Bloqueo por IP (5 fallos → 5 min) ────────────────────────────────────────
+const loginFallos = new Map(); // ip → { count, bloqueadoHasta }
+const BLOQUEO_MS  = 5 * 60 * 1000;
+const MAX_FALLOS  = 5;
+
+function getIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+}
+
+function verificarBloqueo(req, res) {
+  const ip   = getIP(req);
+  const dato = loginFallos.get(ip);
+  if (!dato) return false;
+  if (dato.bloqueadoHasta && Date.now() < dato.bloqueadoHasta) {
+    const restaSeg = Math.ceil((dato.bloqueadoHasta - Date.now()) / 1000);
+    res.status(429).json({ error: `IP bloqueada por demasiados intentos. Intenta en ${restaSeg}s.`, bloqueado: true, restaSeg });
+    return true;
+  }
+  if (dato.bloqueadoHasta && Date.now() >= dato.bloqueadoHasta) loginFallos.delete(ip);
+  return false;
+}
+
+function registrarFallo(req) {
+  const ip   = getIP(req);
+  const dato = loginFallos.get(ip) || { count: 0 };
+  dato.count++;
+  if (dato.count >= MAX_FALLOS) dato.bloqueadoHasta = Date.now() + BLOQUEO_MS;
+  loginFallos.set(ip, dato);
+  return MAX_FALLOS - dato.count;
+}
+
+function limpiarFallos(req) {
+  loginFallos.delete(getIP(req));
+}
+
+// ── CAPTCHA matemático server-side ────────────────────────────────────────────
+const captchaStore = new Map(); // token → { respuesta, expira }
+const CAPTCHA_TTL  = 5 * 60 * 1000;
+
+router.get('/captcha', (req, res) => {
+  const a   = Math.floor(Math.random() * 9) + 1;
+  const b   = Math.floor(Math.random() * 9) + 1;
+  const token = crypto.randomBytes(16).toString('hex');
+  captchaStore.set(token, { respuesta: a + b, expira: Date.now() + CAPTCHA_TTL });
+  // Limpiar captchas viejos
+  for (const [k, v] of captchaStore) if (Date.now() > v.expira) captchaStore.delete(k);
+  res.json({ token, pregunta: `¿Cuánto es ${a} + ${b}?` });
 });
 
 // ── Middleware verificar JWT ──────────────────────────────────────────────────
@@ -27,10 +72,22 @@ function requireAuth(req, res, next) {
 }
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
-router.post('/login', loginLimit, async (req, res) => {
-  const { usuario, password } = req.body;
+router.post('/login', async (req, res) => {
+  if (verificarBloqueo(req, res)) return;
+
+  const { usuario, password, captchaToken, captchaRespuesta } = req.body;
   if (!usuario || !password)
     return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
+
+  // Verificar CAPTCHA
+  const cap = captchaStore.get(captchaToken);
+  if (!cap || Date.now() > cap.expira) {
+    captchaStore.delete(captchaToken);
+    return res.status(400).json({ error: 'CAPTCHA inválido o expirado. Recárgalo.', captchaError: true });
+  }
+  captchaStore.delete(captchaToken); // consumir — no reutilizable
+  if (parseInt(captchaRespuesta) !== cap.respuesta)
+    return res.status(400).json({ error: 'Respuesta del CAPTCHA incorrecta.', captchaError: true });
 
   const [adminUser, adminPass] = await Promise.all([
     getConfig('admin_user'),
@@ -39,16 +96,22 @@ router.post('/login', loginLimit, async (req, res) => {
 
   await new Promise(r => setTimeout(r, 300));
 
-  if (usuario !== adminUser || password !== adminPass)
-    return res.status(401).json({ error: 'Credenciales incorrectas.' });
+  if (usuario !== adminUser || password !== adminPass) {
+    const restantes = registrarFallo(req);
+    const msg = restantes > 0
+      ? `Credenciales incorrectas. Te quedan ${restantes} intento(s).`
+      : `Demasiados intentos fallidos. IP bloqueada por ${BLOQUEO_MS/60000} minutos.`;
+    return res.status(401).json({ error: msg });
+  }
 
+  limpiarFallos(req);
   const token = jwt.sign(
     { sub: adminUser, rol: 'admin', sistema: 'riego-majayura', iat: Math.floor(Date.now()/1000) },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 
-  console.log(`[AUTH] Login exitoso — usuario: ${adminUser}`);
+  console.log(`[AUTH] Login exitoso — usuario: ${adminUser} IP: ${getIP(req)}`);
   res.json({ ok: true, token, usuario: adminUser, expira: '24h', mensaje: 'Bienvenido al Sistema de Riego Majayura' });
 });
 

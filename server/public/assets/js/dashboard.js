@@ -1002,6 +1002,41 @@ function marcarCultivoActivo(clave) {
   document.getElementById('cultivoLabel').textContent = `Activo: ${CULTIVOS[clave].nombre}`;
 }
 
+// ── INACTIVIDAD — cierre automático de sesión ───────────────────
+const INACTIV_AVISO_MS = 18 * 60 * 1000; // aviso a los 18 min
+const INACTIV_CIERRE_S = 120;             // 2 min después cerrar
+
+let _timerAviso, _timerCierre, _intervaloConteo;
+
+function _resetInactividad() {
+  clearTimeout(_timerAviso);
+  clearTimeout(_timerCierre);
+  clearInterval(_intervaloConteo);
+  document.getElementById('modalInactividad')?.classList.remove('open');
+  _timerAviso = setTimeout(_mostrarAvisoInactividad, INACTIV_AVISO_MS);
+}
+
+function _mostrarAvisoInactividad() {
+  let seg = INACTIV_CIERRE_S;
+  document.getElementById('cuentaRegresivaSegundos').textContent = seg;
+  document.getElementById('modalInactividad').classList.add('open');
+  _intervaloConteo = setInterval(() => {
+    seg--;
+    const el = document.getElementById('cuentaRegresivaSegundos');
+    if (el) el.textContent = seg;
+    if (seg <= 0) {
+      clearInterval(_intervaloConteo);
+      cerrarSesion();
+    }
+  }, 1000);
+}
+
+window.continuarSesion = () => _resetInactividad();
+
+['mousemove','keydown','click','scroll','touchstart'].forEach(evt =>
+  document.addEventListener(evt, _resetInactividad, { passive: true })
+);
+
 // ── HORARIO DE RIEGO ────────────────────────────────────────────
 window.abrirModalHorario = () => {
   const modo = localStorage.getItem('horarioModo') || 'todo';
@@ -1067,6 +1102,7 @@ window.guardarHorario = async () => {
 
 // ── INICIO ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  _resetInactividad(); // arrancar timer inactividad
   inicializarSensores();
   inicializarCultivos();
 

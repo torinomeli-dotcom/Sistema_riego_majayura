@@ -213,6 +213,15 @@
         </div>
       </div>
 
+      <div class="mb-3">
+        <label class="form-label">Verificación</label>
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+          <span id="captchaPregunta" style="font-family:'JetBrains Mono',monospace;font-size:0.95rem;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:0.5rem 0.9rem;flex:1;color:#58a6ff">Cargando...</span>
+          <button type="button" onclick="cargarCaptcha()" title="Recargar" style="background:none;border:1px solid #21262d;color:#8b949e;border-radius:8px;padding:0.5rem 0.7rem;cursor:pointer;font-size:1rem">↻</button>
+        </div>
+        <input type="number" id="captchaRespuesta" class="form-control" placeholder="Tu respuesta" required autocomplete="off">
+      </div>
+
       <button type="submit" class="btn-login" id="btnLogin">
         Ingresar al Sistema
       </button>
@@ -259,6 +268,21 @@
       bg.appendChild(drop);
     }
 
+    // ── CAPTCHA ─────────────────────────────────────────────────
+    let captchaToken = '';
+
+    async function cargarCaptcha() {
+      try {
+        const data = await fetch('/api/auth/captcha').then(r => r.json());
+        captchaToken = data.token;
+        document.getElementById('captchaPregunta').textContent = data.pregunta;
+        document.getElementById('captchaRespuesta').value = '';
+      } catch {
+        document.getElementById('captchaPregunta').textContent = 'Error al cargar';
+      }
+    }
+    cargarCaptcha();
+
     // ── Ver/ocultar contraseña ──────────────────────────────────
     function togglePass() {
       const input = document.getElementById('password');
@@ -285,14 +309,15 @@
       btn.textContent = 'Verificando...';
       errDiv.style.display = 'none';
 
-      const usuario  = document.getElementById('usuario').value.trim();
-      const password = document.getElementById('password').value;
+      const usuario          = document.getElementById('usuario').value.trim();
+      const password         = document.getElementById('password').value;
+      const captchaRespuesta = document.getElementById('captchaRespuesta').value;
 
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario, password })
+          body: JSON.stringify({ usuario, password, captchaToken, captchaRespuesta })
         });
 
         const data = await res.json();
@@ -303,6 +328,7 @@
           window.location.href = '/index.html';
         } else {
           mostrarError(data.error || 'Credenciales incorrectas');
+          cargarCaptcha(); // nuevo CAPTCHA en cada intento fallido
         }
       } catch (err) {
         mostrarError('No se pudo conectar al servidor. Verifica tu conexión.');
