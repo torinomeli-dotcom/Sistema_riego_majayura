@@ -990,7 +990,16 @@ function inicializarCultivos() {
     btn.className = 'btn-cultivo';
     btn.id = `cultivo_${key}`;
     btn.innerHTML = `<span class="ce">${c.emoji}</span>${c.nombre}`;
-    btn.onclick = () => seleccionarCultivo(key);
+    btn.onclick = () => {
+      if (cultivoSeleccionado === key) {
+        cultivoSeleccionado = null;
+        btn.classList.remove('activo');
+        document.getElementById('cultivoInfo').style.display = 'none';
+        document.getElementById('cultivoLabel').textContent  = 'Selecciona para ajustar parámetros automáticamente';
+      } else {
+        seleccionarCultivo(key);
+      }
+    };
     grid.appendChild(btn);
   });
   if (typeof twemoji !== 'undefined') twemoji.parse(grid, { folder: 'svg', ext: '.svg' });
