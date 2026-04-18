@@ -149,7 +149,7 @@ function inicializarSensores() {
         <span class="pin-emoji" id="pinemoji_${cfg.id}">⚪</span>
         <span class="pin-label">${cfg.id}</span>
         <span class="pin-pct" id="pinpct_${cfg.id}">--%</span>`;
-      pin.onclick = () => abrirDetalleSensor(cfg.id);
+      pin.onclick = () => sensorSeleccionado === cfg.id ? cerrarDetalleSensor() : abrirDetalleSensor(cfg.id);
       pins.appendChild(pin);
     });
 
