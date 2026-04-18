@@ -1091,18 +1091,27 @@ window.guardarHorario = async () => {
 
   const btn = document.getElementById('btnGuardarHorario');
   btn.disabled = true; btn.textContent = 'Aplicando...';
-  const ok = await enviarComando({ cmd: 'horario_riego', modo, inicio_h, inicio_m, fin_h, fin_m });
-  if (ok) {
-    localStorage.setItem('horarioModo',   modo);
-    localStorage.setItem('horarioIniMin', String(inicio_h * 60 + inicio_m));
-    localStorage.setItem('horarioFinMin', String(fin_h    * 60 + fin_m));
-    cerrarModalHorario();
-    const fmt = (h, m) => { const {h:h12,ampm} = _from24h(h,m); return `${h12}:${String(m).padStart(2,'0')} ${ampm}`; };
-    const etiquetas = { todo:'24/7', dia:'Solo día (7am–6pm)', noche:'Solo noche (6pm–7am)',
-                        rango:`${fmt(inicio_h,inicio_m)} – ${fmt(fin_h,fin_m)}` };
-    mostrarToast(`Horario: ${etiquetas[modo]}`, 'success');
-  } else {
-    document.getElementById('msgHorario').textContent = 'Error al enviar al ESP32. Verifica conexión.';
+  try {
+    const res = await fetch('/api/comando', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+      body: JSON.stringify({ cmd: 'horario_riego', modo, inicio_h, inicio_m, fin_h, fin_m })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      document.getElementById('msgHorario').textContent = err.error || 'Error al enviar al ESP32.';
+    } else {
+      localStorage.setItem('horarioModo',   modo);
+      localStorage.setItem('horarioIniMin', String(inicio_h * 60 + inicio_m));
+      localStorage.setItem('horarioFinMin', String(fin_h    * 60 + fin_m));
+      cerrarModalHorario();
+      const fmt = (h, m) => { const {h:h12,ampm} = _from24h(h,m); return `${h12}:${String(m).padStart(2,'0')} ${ampm}`; };
+      const etiquetas = { todo:'24/7', dia:'Solo día (7am–6pm)', noche:'Solo noche (6pm–7am)',
+                          rango:`${fmt(inicio_h,inicio_m)} – ${fmt(fin_h,fin_m)}` };
+      mostrarToast(`Horario: ${etiquetas[modo]}`, 'success');
+    }
+  } catch {
+    document.getElementById('msgHorario').textContent = 'No se pudo conectar al servidor.';
   }
   btn.disabled = false; btn.textContent = 'Aplicar al sistema';
 };
