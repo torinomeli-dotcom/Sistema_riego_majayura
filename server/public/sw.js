@@ -1,36 +1,31 @@
-const CACHE = 'riego-v2';
-const STATIC = [
-  '/login.html',
-  '/index.html',
-  '/historial.html',
-  '/assets/css/dashboard.css',
-  '/assets/js/dashboard.js',
-  '/manifest.json'
-];
+const CACHE = 'riego-v3';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', e => {
-  // API y WebSocket: siempre red
-  if (e.request.url.includes('/api/') || e.request.url.includes('/ws/')) return;
+  const url = e.request.url;
 
+  // Nunca interceptar: API, WebSocket, JS, CSS, íconos, manifiestos
+  if (url.includes('/api/') || url.includes('/ws/') ||
+      url.includes('.js') || url.includes('.css') ||
+      url.includes('.png') || url.includes('.svg') ||
+      url.includes('manifest.json')) return;
+
+  // Solo páginas HTML: red primero, caché de respaldo offline
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
         return res;
       })
       .catch(() => caches.match(e.request))
