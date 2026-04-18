@@ -1,4 +1,4 @@
-const CACHE = 'riego-v1';
+const CACHE = 'riego-v2';
 const STATIC = [
   '/login.html',
   '/index.html',
