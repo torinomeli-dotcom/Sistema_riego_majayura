@@ -1167,41 +1167,36 @@ body {
 
 /* Navbar deslizable en pantallas pequeñas */
 @media (max-width: 600px) {
-  .navbar {
-    height: auto;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.5rem 0.75rem 0.4rem;
-    gap: 0.35rem;
-  }
-  body { padding-top: 100px; }
-  .nav-brand { justify-content: flex-start; }
+  .navbar { padding: 0 0.75rem; gap: 0.4rem; }
   .nav-icon { font-size: 1.6rem; }
-  .nav-title { font-size: 0.82rem; }
+  .nav-title { font-size: 0.8rem; }
+  .nav-brand { flex-shrink: 0; }
   .nav-actions {
+    min-width: 0;           /* permite que el flex item encoja y active overflow */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding-bottom: 2px;
     flex-wrap: nowrap;
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
   .nav-actions::-webkit-scrollbar { display: none; }
   .btn-nav {
     white-space: nowrap;
     flex-shrink: 0;
-    font-size: 0.72rem;
-    padding: 0.32rem 0.7rem;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.65rem;
   }
   .ws-indicator {
     white-space: nowrap;
     flex-shrink: 0;
-    font-size: 0.72rem;
-    padding: 0.28rem 0.6rem;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.55rem;
   }
+  .btn-tema { flex-shrink: 0; }
 }
 
 @media (max-width: 480px) {
+  body { padding-top: 68px; }
   .act-estado { font-size: 1.2rem; }
   .sensor-pct { font-size: 1.05rem; }
 }
