@@ -1065,6 +1065,8 @@ window.aplicarCultivo = async () => {
     });
     if (res.ok) {
       mostrarToast(`✅ Cultivo "${c.nombre}" aplicado al sistema`, 'success');
+      btn.disabled = false;
+      btn.textContent = 'Aplicar parámetros al sistema';
       document.getElementById('cultivoInfo').style.display = 'none';
       document.getElementById('cultivoLabel').textContent  = `Activo: ${c.nombre}`;
     } else {
