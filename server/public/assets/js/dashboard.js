@@ -1065,7 +1065,8 @@ window.aplicarCultivo = async () => {
     });
     if (res.ok) {
       mostrarToast(`✅ Cultivo "${c.nombre}" aplicado al sistema`, 'success');
-      btn.textContent = `✓ ${c.nombre} activo`;
+      document.getElementById('cultivoInfo').style.display = 'none';
+      document.getElementById('cultivoLabel').textContent  = `Activo: ${c.nombre}`;
     } else {
       const e = await res.json();
       mostrarToast(`Error: ${e.error}`, 'error');
