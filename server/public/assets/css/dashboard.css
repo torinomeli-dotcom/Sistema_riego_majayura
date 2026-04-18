@@ -777,7 +777,45 @@ body {
   padding: 20px;
 }
 
+/* ── CARRUSEL ── */
+.cultivo-carrusel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+.carrusel-nav {
+  flex-shrink: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 10px;
+  width: 36px; height: 36px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.carrusel-nav:hover { background: var(--blue-dim); color: var(--blue); border-color: var(--blue); }
+
 .cultivo-grid {
+  display: flex;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  flex: 1;
+  /* peek de elementos adyacentes */
+  padding-left:  calc(50% - 72px);
+  padding-right: calc(50% - 72px);
+}
+.cultivo-grid::-webkit-scrollbar { display: none; }
+
+/* Clase antigua (usada como grid) — anulada */
+.cultivo-grid-old {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 10px;
@@ -788,31 +826,39 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 12px 6px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 14px;
   border: 2px solid var(--border);
   background: var(--bg);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   font-family: var(--font-main);
   font-size: 0.72rem;
   font-weight: 600;
   text-align: center;
   line-height: 1.2;
+  /* Carrusel: tamaño fijo, centrado con snap */
+  flex-shrink: 0;
+  width: 108px;
+  scroll-snap-align: center;
+  opacity: 0.55;
+  transform: scale(0.9);
 }
+.cultivo-nombre-tag { font-size: 0.68rem; }
 .btn-cultivo:hover {
-  border-color: var(--green);
+  border-color: rgba(63,185,80,0.5);
   color: var(--text);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px var(--green-glow);
+  opacity: 0.75;
 }
 .btn-cultivo.activo {
   border-color: var(--green);
   background: var(--green-dim);
   color: var(--green);
-  box-shadow: 0 0 0 1px var(--green);
+  box-shadow: 0 0 0 1px var(--green), 0 6px 20px var(--green-glow);
+  opacity: 1;
+  transform: scale(1.06);
 }
 .btn-cultivo .ce { font-size: 1.75rem; line-height: 1; }
 .btn-cultivo .ce img.emoji { width: 1.75rem; height: 1.75rem; vertical-align: middle; }

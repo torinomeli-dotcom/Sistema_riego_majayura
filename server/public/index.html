@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/assets/icons/icon.svg">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/dashboard.css?v=6.9">
+  <link rel="stylesheet" href="assets/css/dashboard.css?v=7.0">
   <style>body{visibility:hidden}</style>
 </head>
 <body>
@@ -283,8 +283,12 @@
       <span>🌱 TIPO DE CULTIVO</span>
       <span class="sensores-sub" id="cultivoLabel">Selecciona para ajustar parámetros automáticamente</span>
     </div>
-    <div class="cultivo-grid" id="cultivoGrid"><!-- generado por JS --></div>
-    <div class="cultivo-info" id="cultivoInfo" style="display:none">
+    <div class="cultivo-carrusel">
+      <button class="carrusel-nav" id="carruselPrev">‹</button>
+      <div class="carrusel-track" id="cultivoGrid"></div>
+      <button class="carrusel-nav" id="carruselNext">›</button>
+    </div>
+    <div class="cultivo-info" id="cultivoInfo">
       <div class="cultivo-info-header">
         <span class="cultivo-emoji-big" id="cultivoEmoji"></span>
         <div>
@@ -340,7 +344,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
-<script src="assets/js/dashboard.js?v=6.9"></script>
+<script src="assets/js/dashboard.js?v=7.0"></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
