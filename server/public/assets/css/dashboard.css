@@ -654,6 +654,8 @@ body {
   box-shadow: 0 0 0 1px var(--green);
 }
 .btn-cultivo .ce { font-size: 1.75rem; line-height: 1; }
+.btn-cultivo .ce img.emoji { width: 1.75rem; height: 1.75rem; vertical-align: middle; }
+#cultivoEmoji img.emoji { width: 2.5rem; height: 2.5rem; vertical-align: middle; }
 
 .cultivo-info {
   margin-top: 16px;

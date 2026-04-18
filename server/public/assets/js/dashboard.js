@@ -916,6 +916,7 @@ function inicializarCultivos() {
     btn.onclick = () => seleccionarCultivo(key);
     grid.appendChild(btn);
   });
+  if (typeof twemoji !== 'undefined') twemoji.parse(grid, { folder: 'svg', ext: '.svg' });
 }
 
 function seleccionarCultivo(key) {
@@ -928,6 +929,7 @@ function seleccionarCultivo(key) {
 
   // Llenar panel de info
   document.getElementById('cultivoEmoji').textContent  = c.emoji;
+  if (typeof twemoji !== 'undefined') twemoji.parse(document.getElementById('cultivoEmoji'), { folder: 'svg', ext: '.svg' });
   document.getElementById('cultivoNombre').textContent = c.nombre;
   document.getElementById('cultivoDesc').textContent   = c.desc;
   document.getElementById('cultivoTip').textContent    = c.tip;
