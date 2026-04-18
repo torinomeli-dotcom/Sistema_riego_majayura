@@ -1003,58 +1003,12 @@ function marcarCultivoActivo(clave) {
 }
 
 // ── HORARIO DE RIEGO ────────────────────────────────────────────
-function _poblarSelectHorario() {
-  ['horarioInicioH','horarioFinH'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel.options.length) return;
-    for (let h = 1; h <= 12; h++) {
-      const o = document.createElement('option');
-      o.value = h; o.textContent = h;
-      sel.appendChild(o);
-    }
-  });
-  ['horarioInicioM','horarioFinM'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel.options.length) return;
-    for (let m = 0; m < 60; m += 5) {
-      const o = document.createElement('option');
-      o.value = m; o.textContent = String(m).padStart(2,'0');
-      sel.appendChild(o);
-    }
-  });
-}
-
-function _to24h(h, m, ampm) {
-  h = parseInt(h); m = parseInt(m);
-  if (ampm === 'AM') return { h: h === 12 ? 0 : h, m };
-  return { h: h === 12 ? 12 : h + 12, m };
-}
-
-function _from24h(h24, m) {
-  const ampm = h24 < 12 ? 'AM' : 'PM';
-  const h12  = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
-  return { h: h12, m, ampm };
-}
-
-function _setTimePicker(prefH, prefM, prefP, savedMin) {
-  const total = parseInt(savedMin ?? '360');
-  const h24   = Math.floor(total / 60);
-  const min   = total % 60;
-  const { h, m, ampm } = _from24h(h24, min);
-  document.getElementById(prefH).value = h;
-  document.getElementById(prefM).value = Math.round(m / 5) * 5;
-  document.getElementById(prefP).value = ampm;
-}
-
 window.abrirModalHorario = () => {
-  _poblarSelectHorario();
-  const modo    = localStorage.getItem('horarioModo')    || 'todo';
-  const iniMin  = localStorage.getItem('horarioIniMin')  || '360';  // 6:00 AM
-  const finMin  = localStorage.getItem('horarioFinMin')  || '1080'; // 6:00 PM
-  const radio   = document.querySelector(`input[name="horarioModo"][value="${modo}"]`);
+  const modo = localStorage.getItem('horarioModo') || 'todo';
+  const radio = document.querySelector(`input[name="horarioModo"][value="${modo}"]`);
   if (radio) radio.checked = true;
-  _setTimePicker('horarioInicioH','horarioInicioM','horarioInicioP', iniMin);
-  _setTimePicker('horarioFinH',   'horarioFinM',   'horarioFinP',    finMin);
+  document.getElementById('horarioDesde').value = localStorage.getItem('horarioDesde') || '06:00';
+  document.getElementById('horarioHasta').value = localStorage.getItem('horarioHasta') || '18:00';
   document.getElementById('horarioRangoWrap').style.display = modo === 'rango' ? 'block' : 'none';
   document.getElementById('msgHorario').textContent = '';
   document.getElementById('modalHorario').classList.add('open');
@@ -1073,18 +1027,13 @@ window.guardarHorario = async () => {
 
   let inicio_h = 0, inicio_m = 0, fin_h = 23, fin_m = 59;
   if (modo === 'rango') {
-    const ini = _to24h(document.getElementById('horarioInicioH').value,
-                       document.getElementById('horarioInicioM').value,
-                       document.getElementById('horarioInicioP').value);
-    const fin = _to24h(document.getElementById('horarioFinH').value,
-                       document.getElementById('horarioFinM').value,
-                       document.getElementById('horarioFinP').value);
-    inicio_h = ini.h; inicio_m = ini.m;
-    fin_h    = fin.h; fin_m    = fin.m;
-    const iniTotal = inicio_h * 60 + inicio_m;
-    const finTotal = fin_h    * 60 + fin_m;
-    if (finTotal <= iniTotal) {
-      document.getElementById('msgHorario').textContent = 'La hora "Hasta" debe ser mayor que "Desde".';
+    const desde = document.getElementById('horarioDesde').value; // "HH:MM"
+    const hasta = document.getElementById('horarioHasta').value;
+    if (!desde || !hasta) { document.getElementById('msgHorario').textContent = 'Selecciona ambas horas.'; return; }
+    [inicio_h, inicio_m] = desde.split(':').map(Number);
+    [fin_h,    fin_m]    = hasta.split(':').map(Number);
+    if ((fin_h * 60 + fin_m) <= (inicio_h * 60 + inicio_m)) {
+      document.getElementById('msgHorario').textContent = '"Hasta" debe ser mayor que "Desde".';
       return;
     }
   }
@@ -1101,13 +1050,13 @@ window.guardarHorario = async () => {
       const err = await res.json();
       document.getElementById('msgHorario').textContent = err.error || 'Error al enviar al ESP32.';
     } else {
-      localStorage.setItem('horarioModo',   modo);
-      localStorage.setItem('horarioIniMin', String(inicio_h * 60 + inicio_m));
-      localStorage.setItem('horarioFinMin', String(fin_h    * 60 + fin_m));
+      localStorage.setItem('horarioModo',  modo);
+      localStorage.setItem('horarioDesde', document.getElementById('horarioDesde').value);
+      localStorage.setItem('horarioHasta', document.getElementById('horarioHasta').value);
       cerrarModalHorario();
-      const fmt = (h, m) => { const {h:h12,ampm} = _from24h(h,m); return `${h12}:${String(m).padStart(2,'0')} ${ampm}`; };
+      const fmt24 = (h, m) => `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
       const etiquetas = { todo:'24/7', dia:'Solo día (7am–6pm)', noche:'Solo noche (6pm–7am)',
-                          rango:`${fmt(inicio_h,inicio_m)} – ${fmt(fin_h,fin_m)}` };
+                          rango:`${fmt24(inicio_h,inicio_m)} – ${fmt24(fin_h,fin_m)}` };
       mostrarToast(`Horario: ${etiquetas[modo]}`, 'success');
     }
   } catch {
