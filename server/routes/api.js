@@ -77,9 +77,11 @@ module.exports = function(getUltimoEstado, getHistorial, enviarComandoESP32, cmd
       }
       payload.url = url;
     } else if (cmd === 'horario_riego') {
-      payload.modo   = String(req.body.modo   || 'todo').slice(0, 10);
-      payload.inicio = Number(req.body.inicio ?? 0);
-      payload.fin    = Number(req.body.fin    ?? 23);
+      payload.modo    = String(req.body.modo    || 'todo').slice(0, 10);
+      payload.inicio_h = Number(req.body.inicio_h ?? 0);
+      payload.inicio_m = Number(req.body.inicio_m ?? 0);
+      payload.fin_h    = Number(req.body.fin_h    ?? 23);
+      payload.fin_m    = Number(req.body.fin_m    ?? 59);
     } else {
       if (estado !== undefined) payload.estado = !!estado;
       if (auto   !== undefined) payload.estado  = !!auto;

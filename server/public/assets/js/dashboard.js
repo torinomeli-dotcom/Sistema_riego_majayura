@@ -1003,14 +1003,58 @@ function marcarCultivoActivo(clave) {
 }
 
 // ── HORARIO DE RIEGO ────────────────────────────────────────────
+function _poblarSelectHorario() {
+  ['horarioInicioH','horarioFinH'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel.options.length) return;
+    for (let h = 1; h <= 12; h++) {
+      const o = document.createElement('option');
+      o.value = h; o.textContent = h;
+      sel.appendChild(o);
+    }
+  });
+  ['horarioInicioM','horarioFinM'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel.options.length) return;
+    for (let m = 0; m < 60; m += 5) {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = String(m).padStart(2,'0');
+      sel.appendChild(o);
+    }
+  });
+}
+
+function _to24h(h, m, ampm) {
+  h = parseInt(h); m = parseInt(m);
+  if (ampm === 'AM') return { h: h === 12 ? 0 : h, m };
+  return { h: h === 12 ? 12 : h + 12, m };
+}
+
+function _from24h(h24, m) {
+  const ampm = h24 < 12 ? 'AM' : 'PM';
+  const h12  = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+  return { h: h12, m, ampm };
+}
+
+function _setTimePicker(prefH, prefM, prefP, savedMin) {
+  const total = parseInt(savedMin ?? '360');
+  const h24   = Math.floor(total / 60);
+  const min   = total % 60;
+  const { h, m, ampm } = _from24h(h24, min);
+  document.getElementById(prefH).value = h;
+  document.getElementById(prefM).value = Math.round(m / 5) * 5;
+  document.getElementById(prefP).value = ampm;
+}
+
 window.abrirModalHorario = () => {
-  const modo = localStorage.getItem('horarioModo') || 'todo';
-  const ini  = localStorage.getItem('horarioInicio') || '6';
-  const fin  = localStorage.getItem('horarioFin')    || '18';
-  const radio = document.querySelector(`input[name="horarioModo"][value="${modo}"]`);
+  _poblarSelectHorario();
+  const modo    = localStorage.getItem('horarioModo')    || 'todo';
+  const iniMin  = localStorage.getItem('horarioIniMin')  || '360';  // 6:00 AM
+  const finMin  = localStorage.getItem('horarioFinMin')  || '1080'; // 6:00 PM
+  const radio   = document.querySelector(`input[name="horarioModo"][value="${modo}"]`);
   if (radio) radio.checked = true;
-  document.getElementById('horarioInicio').value = ini;
-  document.getElementById('horarioFin').value    = fin;
+  _setTimePicker('horarioInicioH','horarioInicioM','horarioInicioP', iniMin);
+  _setTimePicker('horarioFinH',   'horarioFinM',   'horarioFinP',    finMin);
   document.getElementById('horarioRangoWrap').style.display = modo === 'rango' ? 'block' : 'none';
   document.getElementById('msgHorario').textContent = '';
   document.getElementById('modalHorario').classList.add('open');
@@ -1026,22 +1070,37 @@ window.onHorarioChange = () => {
 window.guardarHorario = async () => {
   const modo = document.querySelector('input[name="horarioModo"]:checked')?.value;
   if (!modo) return;
-  const inicio = parseInt(document.getElementById('horarioInicio').value);
-  const fin    = parseInt(document.getElementById('horarioFin').value);
-  if (modo === 'rango' && (isNaN(inicio) || isNaN(fin) || inicio < 0 || fin > 23 || inicio >= fin)) {
-    document.getElementById('msgHorario').textContent = 'Rango inválido. Desde debe ser menor que Hasta (0-23).';
-    return;
+
+  let inicio_h = 0, inicio_m = 0, fin_h = 23, fin_m = 59;
+  if (modo === 'rango') {
+    const ini = _to24h(document.getElementById('horarioInicioH').value,
+                       document.getElementById('horarioInicioM').value,
+                       document.getElementById('horarioInicioP').value);
+    const fin = _to24h(document.getElementById('horarioFinH').value,
+                       document.getElementById('horarioFinM').value,
+                       document.getElementById('horarioFinP').value);
+    inicio_h = ini.h; inicio_m = ini.m;
+    fin_h    = fin.h; fin_m    = fin.m;
+    const iniTotal = inicio_h * 60 + inicio_m;
+    const finTotal = fin_h    * 60 + fin_m;
+    if (finTotal <= iniTotal) {
+      document.getElementById('msgHorario').textContent = 'La hora "Hasta" debe ser mayor que "Desde".';
+      return;
+    }
   }
+
   const btn = document.getElementById('btnGuardarHorario');
   btn.disabled = true; btn.textContent = 'Aplicando...';
-  const ok = await enviarComando({ cmd: 'horario_riego', modo, inicio, fin });
+  const ok = await enviarComando({ cmd: 'horario_riego', modo, inicio_h, inicio_m, fin_h, fin_m });
   if (ok) {
-    localStorage.setItem('horarioModo', modo);
-    localStorage.setItem('horarioInicio', inicio);
-    localStorage.setItem('horarioFin', fin);
+    localStorage.setItem('horarioModo',   modo);
+    localStorage.setItem('horarioIniMin', String(inicio_h * 60 + inicio_m));
+    localStorage.setItem('horarioFinMin', String(fin_h    * 60 + fin_m));
     cerrarModalHorario();
-    const etiquetas = { todo: '24/7', dia: 'Solo día', noche: 'Solo noche', rango: `${inicio}h–${fin}h` };
-    mostrarToast(`Horario aplicado: ${etiquetas[modo]}`, 'success');
+    const fmt = (h, m) => { const {h:h12,ampm} = _from24h(h,m); return `${h12}:${String(m).padStart(2,'0')} ${ampm}`; };
+    const etiquetas = { todo:'24/7', dia:'Solo día (7am–6pm)', noche:'Solo noche (6pm–7am)',
+                        rango:`${fmt(inicio_h,inicio_m)} – ${fmt(fin_h,fin_m)}` };
+    mostrarToast(`Horario: ${etiquetas[modo]}`, 'success');
   } else {
     document.getElementById('msgHorario').textContent = 'Error al enviar al ESP32. Verifica conexión.';
   }

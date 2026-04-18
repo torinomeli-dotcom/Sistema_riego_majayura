@@ -141,8 +141,10 @@ char motivoRiego[64]      = "Sistema iniciado";
 // Horario de riego (guardado en flash)
 // modos: "todo"=24/7 | "dia"=7-18 | "noche"=18-7 | "rango"=inicio-fin
 char          horarioModo[8]   = "todo";
-int           horarioInicio    = 0;
-int           horarioFin       = 23;
+int           horarioInicioH   = 0;
+int           horarioInicioM   = 0;
+int           horarioFinH      = 23;
+int           horarioFinM      = 59;
 
 // Calibración dinámica por cultivo (guardada en flash)
 int           umbralSeco       = DEF_UMBRAL_SECO;
@@ -231,11 +233,13 @@ void setup() {
 
   prefs.begin("horario", true);
   prefs.getString("modo", horarioModo, sizeof(horarioModo));
-  horarioInicio = prefs.getInt("inicio", 0);
-  horarioFin    = prefs.getInt("fin",   23);
+  horarioInicioH = prefs.getInt("iniH", 0);
+  horarioInicioM = prefs.getInt("iniM", 0);
+  horarioFinH    = prefs.getInt("finH", 23);
+  horarioFinM    = prefs.getInt("finM", 59);
   prefs.end();
   if (strlen(horarioModo) == 0) strlcpy(horarioModo, "todo", sizeof(horarioModo));
-  Serial.printf("[HORARIO] modo:%s %d-%d\n", horarioModo, horarioInicio, horarioFin);
+  Serial.printf("[HORARIO] modo:%s %02d:%02d-%02d:%02d\n", horarioModo, horarioInicioH, horarioInicioM, horarioFinH, horarioFinM);
 
   WiFi.persistent(true);
 
@@ -465,15 +469,19 @@ void procesarMensajeWS(char* payload, size_t length) {
   // Comando especial: horario de riego
   if (strcmp(cmd, "horario_riego") == 0) {
     strlcpy(horarioModo, doc["modo"] | "todo", sizeof(horarioModo));
-    horarioInicio = doc["inicio"] | 0;
-    horarioFin    = doc["fin"]    | 23;
+    horarioInicioH = doc["inicio_h"] | 0;
+    horarioInicioM = doc["inicio_m"] | 0;
+    horarioFinH    = doc["fin_h"]    | 23;
+    horarioFinM    = doc["fin_m"]    | 59;
     prefs.begin("horario", false);
-    prefs.putString("modo",  horarioModo);
-    prefs.putInt("inicio",   horarioInicio);
-    prefs.putInt("fin",      horarioFin);
+    prefs.putString("modo", horarioModo);
+    prefs.putInt("iniH",    horarioInicioH);
+    prefs.putInt("iniM",    horarioInicioM);
+    prefs.putInt("finH",    horarioFinH);
+    prefs.putInt("finM",    horarioFinM);
     prefs.end();
     char msg[32]; snprintf(msg, sizeof(msg), "Horario:%s", horarioModo);
-    Serial.printf("[HORARIO] modo:%s %d-%d\n", horarioModo, horarioInicio, horarioFin);
+    Serial.printf("[HORARIO] modo:%s %02d:%02d-%02d:%02d\n", horarioModo, horarioInicioH, horarioInicioM, horarioFinH, horarioFinM);
     lcdMsg("Horario riego   ", msg);
     transmitirEstado();
     return;
@@ -558,13 +566,17 @@ const char* estadoSensor(int adc) {
 // =====================================================================
 bool enHorarioRiego() {
   if (strcmp(horarioModo, "todo") == 0) return true;
-  if (!ntpOk) return true; // sin NTP no bloqueamos
+  if (!ntpOk) return true;
   struct tm t;
   if (!getLocalTime(&t, 0)) return true;
-  int h = t.tm_hour;
-  if (strcmp(horarioModo, "dia")   == 0) return (h >= 7  && h < 18);
-  if (strcmp(horarioModo, "noche") == 0) return (h >= 18 || h < 7);
-  if (strcmp(horarioModo, "rango") == 0) return (h >= horarioInicio && h < horarioFin);
+  int ahora = t.tm_hour * 60 + t.tm_min;
+  if (strcmp(horarioModo, "dia")   == 0) return (ahora >= 7*60  && ahora < 18*60);
+  if (strcmp(horarioModo, "noche") == 0) return (ahora >= 18*60 || ahora < 7*60);
+  if (strcmp(horarioModo, "rango") == 0) {
+    int ini = horarioInicioH * 60 + horarioInicioM;
+    int fin = horarioFinH    * 60 + horarioFinM;
+    return (ahora >= ini && ahora < fin);
+  }
   return true;
 }
 
@@ -675,9 +687,11 @@ String construirJSON() {
   if (otaFallo) { doc["ota_fallo"] = true; otaFallo = false; }
   doc["modo_auto"]             = modoAuto;
   JsonObject hor = doc.createNestedObject("horario");
-  hor["modo"]   = horarioModo;
-  hor["inicio"] = horarioInicio;
-  hor["fin"]    = horarioFin;
+  hor["modo"]    = horarioModo;
+  hor["inicio_h"] = horarioInicioH;
+  hor["inicio_m"] = horarioInicioM;
+  hor["fin_h"]    = horarioFinH;
+  hor["fin_m"]    = horarioFinM;
 
   JsonObject cal = doc.createNestedObject("calibracion");
   cal["cultivo"]           = cultivoActual;
