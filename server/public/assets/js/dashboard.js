@@ -129,6 +129,7 @@ function pinEmoji(estado) {
 
 function inicializarSensores() {
   const mapa = document.getElementById('campoMapa');
+  if (!mapa) return;
   mapa.innerHTML = '';
 
   ['IZQ','CTR','DER'].forEach(zona => {
@@ -1179,16 +1180,14 @@ window.guardarHorario = async () => {
 
 // ── INICIO ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  _resetInactividad(); // arrancar timer inactividad
-  inicializarSensores();
-  inicializarCultivos();
-
-  // Cargar estado inicial por HTTP inmediatamente (por si WS tarda)
-  cargarEstadoHTTP();
-
-  // Polling HTTP de respaldo cada 60s (fallback si WS se pierde)
-  setInterval(cargarEstadoHTTP, 60000);
-
-  // WebSocket para actualizaciones en tiempo real
-  conectarWS();
+  try {
+    _resetInactividad();
+    inicializarSensores();
+    inicializarCultivos();
+    cargarEstadoHTTP();
+    setInterval(cargarEstadoHTTP, 60000);
+    conectarWS();
+  } catch(e) {
+    console.error('[Dashboard] Error al inicializar:', e);
+  }
 });
