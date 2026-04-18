@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.onrender.riegomimajayura.twa",
+    "sha256_cert_fingerprints": ["29:76:63:21:90:4C:AA:F9:69:33:7D:3C:D7:30:99:E2:C7:12:27:62:CC:83:45:CD:38:3D:80:2D:8A:65:B4:37"]
+  }
+}]
